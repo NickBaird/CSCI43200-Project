@@ -1,0 +1,43 @@
+
+* {
+	margin:  0;
+	padding:  0;
+}
+
+.con {
+	margin:  20px;
+	padding: 20px;
+	background-color: #bdc3c7;
+	border-radius: 15px;
+}
+
+p {
+	display: inline;
+}
+
+.conversation {
+	background-color: #e74c3c;
+	padding: 10px;
+	border-radius: 15px;
+}
+
+.conversation:hover {
+	background-color: #c0392b;
+}
+
+.other {
+	display: block;
+	background-color: #2ecc71;
+	padding: 10px;
+	width: 40%;
+	border-radius: 15px;
+}
+
+.you {
+	display: block;
+	background-color: #3498db;
+	padding: 10px;
+	width: 40%;
+	margin-left: 57%;
+	border-radius: 15px;
+}
