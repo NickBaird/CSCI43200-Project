@@ -25,6 +25,12 @@ p {
 	background-color: #c0392b;
 }
 
+.invite {
+	background-color: #e67e22;
+	padding: 10px;
+	border-radius: 15px;
+}
+
 .other {
 	display: block;
 	background-color: #2ecc71;

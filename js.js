@@ -23,6 +23,7 @@ var loaded = null;
 var otherdisplay = null;
 var received_messages = [];
 var sent_messages = [];
+var invites = [];
 
 
 
@@ -103,6 +104,7 @@ function initialize() {
         database.ref("/users/" + auth.currentUser.uid + "/display").get().then((dis) => {
             display = dis.val();
             document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
+            get_invites();
         });
     });
 
@@ -130,43 +132,100 @@ async function add_to_map(uid) {
     }
 }
 
+async function send_conversation_invite(uid) {
+    await database.ref("/invites/" + uid + "/conversations/" + auth.currentUser.uid).set(true);
+    await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
+}
+
+async function send_group_invite(groupId, uid) {
+    await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
+    await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
+}
+
+async function accept_conversation_invite(uid) {
+    await database.ref("/invites/" + auth.currentUser.uid + "/conversations/" + uid).set(null);
+    await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
+}
+
+async function accept_group_invite(groupId) {
+    await database.ref("/invites/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
+    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + uid).set(true);
+}
+
+async function reject_conversation_invite(uid) {
+    await database.ref("/invites/" + auth.currentUser.uid + "/conversations/" + uid).set(null);
+    // await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(null);
+}
+
+async function reject_group_invite(groupId) {
+    await database.ref("/invites/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
+    // await database.ref("/users/" + auth.currentUser.uid + "/groups/" + uid).set(null);
+}
+
+
+async function get_invites() {
+    await database.ref("/invites/" + auth.currentUser.uid + "/conversations/").on("value", (conversations) => {
+        invites = []
+        update_invites();
+        conversations.forEach((conversation) => {
+            database.ref("/users/" + conversation.key + "/display").get().then((display) => {
+                invites.push("<h3>" + display.val() + " is wanting to message you! </h3><br><h5>UID: " + conversation.key + "</h5><br><button onclick=\"accept_conversation_invite('" + conversation.key + "')\">Accept</button><button onclick=\"reject_conversation_invite('" + conversation.key + "')\">Reject</button>") ;    
+                update_invites();
+            });
+        });
+    });
+
+   
+}
+
+
 
 async function send_message(uid, message) {
     await add_to_map(uid);
     nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
     encrypted = sodium.crypto_secretbox_easy(message, nonce, map[uid].ctx);
 
-    payload = {
+    var payload = {
         timestamp : new Date().getTime(),
         payload : sodium.to_hex(encrypted),
         nonce : sodium.to_hex(nonce)
     };
 
-    database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
-    database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
-    database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
+    await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
+    
+    // OLD
+    //await database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
+    //database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
+    //database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
 }
 
 async function send_file(uid, file) {
-    await add_to_map(uid);
-    nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-    encrypted = sodium.crypto_secretbox_easy(await pako.gzip(await file.arrayBuffer()), nonce, map[uid].ctx);
+    if (file.size <= 100000) {
+        await add_to_map(uid);
+        nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        encrypted = sodium.crypto_secretbox_easy(await pako.gzip(await file.arrayBuffer()), nonce, map[uid].ctx);
 
-    payload = {
-        timestamp : new Date().getTime(),
-        payload : sodium.to_hex(encrypted),
-        nonce : sodium.to_hex(nonce),
-        type : file.type
+        var payload = {
+            timestamp : new Date().getTime(),
+            payload : sodium.to_hex(encrypted),
+            nonce : sodium.to_hex(nonce),
+            type : file.type
+        }
+
+        await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
+
+        // OLD
+        //database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
+        //database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
+        //database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
+    } else {
+        console.err("Size of file is too big!");
     }
-
-    database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
-    database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
-    database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
 }
 
 async function get_received_messages(uid) {
     received_messages = [];
-    return database.ref("/users/" + auth.currentUser.uid + "/messages/" + uid).on('child_added', (message) => {
+    return database.ref("/messages/" + auth.currentUser.uid + "/" + uid).on('child_added', (message) => {
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
@@ -207,7 +266,7 @@ async function get_received_messages(uid) {
 
 async function get_sent_messages(uid) {
     sent_messages = [];
-    return database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).on('child_added', (message) => {
+    return database.ref("/messages/" + uid + "/" + auth.currentUser.uid).on('child_added', (message) => {
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
@@ -254,6 +313,7 @@ function new_conversation() {
 }
 
 function load_conversation(uid) {
+    unload_conversation();
     loaded = uid;
     otherdisplay = map[uid].display;
     get_received_messages(uid);
@@ -308,6 +368,14 @@ function update_conversations() {
     container.innerHTML = "";
     Object.keys(map).forEach((key) => {
       container.innerHTML += "<div class=\"conversation\" onclick=\"load_conversation(\'" + key + "\')\"><h3>" + map[key].display + "</h3><br>" + key + "</div> <br>"
+    });
+}
+
+function update_invites() {
+    var container = document.getElementById('invites-container');
+    container.innerHTML = "";
+    invites.forEach((invite) => {
+        container.innerHTML += "<div class=\"invite\">" + invite + "</div>";
     });
 }
 
