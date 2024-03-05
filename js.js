@@ -13,9 +13,10 @@ const auth = firebase.auth();
 const database = firebase.database();
 
 const dbName = 'testdatabase3';
-const dbVersion = 2;
+const dbVersion = 4;
 
 var public = null;
+var publicSignature = null;
 var display = null;
 var map = {};
 
@@ -46,12 +47,18 @@ function register() {
     auth.createUserWithEmailAndPassword(email.value, password.value).then((userCredential) => {
         var user = userCredential;
         var keys = sodium.crypto_kx_keypair();
+        var signing = sodium.crypto_sign_keypair();
+
         var userData = {
             display : display.value,
-            public : sodium.to_hex(keys.publicKey)
+            public : sodium.to_hex(keys.publicKey),
+            signature : sodium.to_hex(signing.publicKey)
         };
         database.ref('/users/' + auth.currentUser.uid).set(userData);
+
+        // TEMP
         localStorage.setItem("private", sodium.to_hex(keys.privateKey));
+        localStorage.setItem("signature", sodium.to_hex(signing.privateKey));
 
         const indexed = window.indexedDB.open(dbName, dbVersion);
 
@@ -63,16 +70,25 @@ function register() {
             if (!db.objectStoreNames.contains('keys')) {
                 const objectStore = db.createObjectStore('keys', { keyPath: 'uid' });
             }
+
+            if(!db.objectStoreNames.contains('signature')) {
+                const objectStore = db.createObjectStore('signature', { keyPath: 'uid' });
+            }
         };
 
         indexed.onsuccess = function(event) {
             console.log("SUCCESS");
-            var key = get_private_local()
+
             const db = event.target.result;
 
             var transaction = db.transaction(['keys'], 'readwrite');
             var objectStore = transaction.objectStore('keys');
-            var keyData = { uid: auth.currentUser.uid, privateKey: key };
+            var keyData = { uid: auth.currentUser.uid, privateKey: sodium.to_hex(keys.privateKey) };
+            var request = objectStore.put(keyData);
+
+            var transaction = db.transaction(['signature'], 'readwrite');
+            var objectStore = transaction.objectStore('signature');
+            var keyData = { uid: auth.currentUser.uid, privateKey: sodium.to_hex(signing.privateKey) };
             var request = objectStore.put(keyData);
 
             request.onsuccess = function(event) {
@@ -101,10 +117,13 @@ function initialize() {
     console.log("INIT");
     database.ref("/users/" + auth.currentUser.uid + "/public").get().then((pub) => {
         public = pub.val();
-        database.ref("/users/" + auth.currentUser.uid + "/display").get().then((dis) => {
-            display = dis.val();
-            document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
-            get_invites();
+        database.ref("/users/" + auth.currentUser.uid + "/signature").get().then((sig) => {
+            publicSignature = sig.val();
+            database.ref("/users/" + auth.currentUser.uid + "/display").get().then((dis) => {
+                display = dis.val();
+                document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
+                get_invites();
+            });
         });
     });
 
@@ -116,12 +135,14 @@ function initialize() {
 async function add_to_map(uid) {
     if(!map.hasOwnProperty(uid)) {
         const otherPublic = (await database.ref("/users/" + uid + "/public").get()).val();
+        const otherSignature = (await database.ref("/users/" + uid + "/signature").get()).val();
         const otherDisplay = (await database.ref("/users/" + uid + "/display").get()).val();
         const privateKey = await get_private();
         const clientkeys = sodium.crypto_kx_client_session_keys(sodium.from_hex(public), sodium.from_hex(privateKey), sodium.from_hex(otherPublic));
         const serverkeys = sodium.crypto_kx_server_session_keys(sodium.from_hex(public), sodium.from_hex(privateKey), sodium.from_hex(otherPublic));
         map[uid] = {
             hex : otherPublic,
+            signature : otherSignature,
             display : otherDisplay,
             crx : clientkeys.sharedRx,
             ctx : clientkeys.sharedTx,
@@ -174,14 +195,22 @@ async function get_invites() {
             });
         });
     });
+}
 
-   
+
+
+
+async function create_group() {
+    var groupId = sodium.to_hex(sodium.crypto_generichash(16, sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)))
+    await database.ref("/groups/" + groupId + "/admin/" + auth.currentUser.uid).set(true);
+    await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(true);
 }
 
 
 
 async function send_message(uid, message) {
     await add_to_map(uid);
+    message = await sign_message(message);
     nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
     encrypted = sodium.crypto_secretbox_easy(message, nonce, map[uid].ctx);
 
@@ -202,8 +231,9 @@ async function send_message(uid, message) {
 async function send_file(uid, file) {
     if (file.size <= 100000) {
         await add_to_map(uid);
+        var contents = await sign_message(new Uint8Array(await file.arrayBuffer()));
         nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        encrypted = sodium.crypto_secretbox_easy(await pako.gzip(await file.arrayBuffer()), nonce, map[uid].ctx);
+        encrypted = sodium.crypto_secretbox_easy(await pako.gzip(contents), nonce, map[uid].ctx);
 
         var payload = {
             timestamp : new Date().getTime(),
@@ -235,12 +265,12 @@ async function get_received_messages(uid) {
 
         if(type == null) {
             output = {
-                message: sodium.to_string(decrypted),
+                message: sodium.to_string(verify_message(decrypted, map[uid].signature)),
                 timestamp: timestamp
             }
         } else {
 
-            decrypted = pako.inflate(decrypted);
+            decrypted = sodium.to_string(verify_message(pako.inflate(decrypted), map[uid].signature));
 
             if(type.indexOf('image') >= 0){
                 output = {
@@ -276,12 +306,12 @@ async function get_sent_messages(uid) {
 
         if(type == null) {
             output = {
-                message: sodium.to_string(decrypted),
+                message: sodium.to_string(verify_message(decrypted, publicSignature)),
                 timestamp: timestamp
             }
         } else {
 
-            decrypted = pako.inflate(decrypted);
+            decrypted = sodium.to_string(verify_message(pako.inflate(decrypted), publicSignature));
 
             if(type.indexOf('image') >= 0){
                 output = {
@@ -380,6 +410,15 @@ function update_invites() {
 }
 
 
+async function sign_message(message) {
+    return sodium.crypto_sign(message, sodium.from_hex(await get_signature()));
+}
+
+function verify_message(message, public) {
+    return sodium.crypto_sign_open(message, sodium.from_hex(public));
+}
+
+
 
 
 async function get_private() {
@@ -412,6 +451,42 @@ async function get_private() {
             } else {
                 console.error('Private key not found!');
                 reject(new Error('Private key not found'));
+            }
+        };
+    });
+}
+
+
+async function get_signature() {
+    return new Promise((resolve, reject) => {
+        const indexed = window.indexedDB.open(dbName, dbVersion);
+
+        indexed.onsuccess = function(event) {
+
+            const db = event.target.result;
+            if (db.objectStoreNames.contains('signature')) {
+                var transaction = db.transaction(['signature'], 'readonly');
+                var objectStore = transaction.objectStore('signature');
+                var request = objectStore.get(auth.currentUser.uid);
+
+                request.onsuccess = function(event) {
+                    const keyData = event.target.result;
+                    if (keyData) {
+                        console.log('Signing key retrieved successfully:', keyData.privateKey);
+                        resolve(keyData.privateKey);
+                    } else {
+                        console.error('Signing key not found');
+                        reject(new Error('Signing key not found'));
+                    }
+                };
+
+                request.onerror = function(event) {
+                    console.error('Error retrieving private key');
+                    reject(event.target.error);
+                };  
+            } else {
+                console.error('Signing key not found!');
+                reject(new Error('Signing key not found'));
             }
         };
     });
