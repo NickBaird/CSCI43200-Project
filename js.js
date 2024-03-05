@@ -102,7 +102,7 @@ function initialize() {
         public = pub.val();
         database.ref("/users/" + auth.currentUser.uid + "/display").get().then((dis) => {
             display = dis.val();
-            document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + public + "</p>";
+            document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
         });
     });
 
@@ -147,24 +147,57 @@ async function send_message(uid, message) {
     database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
 }
 
-function send_image(uid, image) {
+async function send_file(uid, file) {
+    await add_to_map(uid);
+    nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+    encrypted = sodium.crypto_secretbox_easy(await pako.gzip(await file.arrayBuffer()), nonce, map[uid].ctx);
 
+    payload = {
+        timestamp : new Date().getTime(),
+        payload : sodium.to_hex(encrypted),
+        nonce : sodium.to_hex(nonce),
+        type : file.type
+    }
+
+    database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
+    database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
+    database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
 }
 
 async function get_received_messages(uid) {
     received_messages = [];
     return database.ref("/users/" + auth.currentUser.uid + "/messages/" + uid).on('child_added', (message) => {
-        console.log(message.val());
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
+        type = message.child('type').val();
 
         decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
 
-        output = {
-            message: sodium.to_string(decrypted),
-            timestamp: timestamp
+        if(type == null) {
+            output = {
+                message: sodium.to_string(decrypted),
+                timestamp: timestamp
+            }
+        } else {
+
+            decrypted = pako.inflate(decrypted);
+
+            if(type.indexOf('image') >= 0){
+                output = {
+                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
+                    type: type,
+                    timestamp: timestamp
+                }
+            } else {
+                output = {
+                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
+                    type: type,
+                    timestamp: timestamp
+                }
+            }
         }
+
         received_messages.push(output);
         update_messages();
     });
@@ -178,13 +211,34 @@ async function get_sent_messages(uid) {
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
+        type = message.child('type').val();
 
         decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].ctx);
 
-        output = {
-            message: sodium.to_string(decrypted),
-            timestamp: timestamp
+        if(type == null) {
+            output = {
+                message: sodium.to_string(decrypted),
+                timestamp: timestamp
+            }
+        } else {
+
+            decrypted = pako.inflate(decrypted);
+
+            if(type.indexOf('image') >= 0){
+                output = {
+                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
+                    type: type,
+                    timestamp: timestamp
+                }
+            } else {
+                output = {
+                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
+                    type: type,
+                    timestamp: timestamp
+                }
+            }
         }
+
         sent_messages.push(output);
         update_messages();
     });
@@ -206,7 +260,7 @@ function load_conversation(uid) {
     get_sent_messages(uid);
 
     var container = document.getElementById('message-container');
-    container.innerHTML = "<input type=\"text\" id=\"message-box\"><button onclick=\"send_message(\'" + uid+ "\', " + "document.getElementById('message-box').value);\">Send</button>";
+    container.innerHTML = "<input type=\"text\" id=\"message-box\"><button onclick=\"send_message(\'" + uid+ "\', " + "document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file(\'" + uid + "\', document.getElementById('file-upload').files[0]);\">Send File</button>";
 }
 
 function unload_conversation() {
