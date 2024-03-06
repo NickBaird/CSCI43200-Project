@@ -270,7 +270,7 @@ async function get_received_messages(uid) {
             }
         } else {
 
-            decrypted = sodium.to_string(verify_message(pako.inflate(decrypted), map[uid].signature));
+            decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
 
             if(type.indexOf('image') >= 0){
                 output = {
@@ -311,7 +311,7 @@ async function get_sent_messages(uid) {
             }
         } else {
 
-            decrypted = sodium.to_string(verify_message(pako.inflate(decrypted), publicSignature));
+            decrypted = verify_message(pako.inflate(decrypted), publicSignature);
 
             if(type.indexOf('image') >= 0){
                 output = {
