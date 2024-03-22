@@ -220,6 +220,7 @@ async function send_message(uid, message) {
         nonce : sodium.to_hex(nonce)
     };
 
+    await send_conversation_invite(uid);
     await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
     
     // OLD
@@ -241,7 +242,8 @@ async function send_file(uid, file) {
             nonce : sodium.to_hex(nonce),
             type : file.type
         }
-
+        
+        await send_conversation_invite(uid);
         await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
 
         // OLD
