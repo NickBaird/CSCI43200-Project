@@ -220,6 +220,7 @@ async function send_message(uid, message) {
         nonce : sodium.to_hex(nonce)
     };
 
+    await send_conversation_invite(uid);
     await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
     
     // OLD
