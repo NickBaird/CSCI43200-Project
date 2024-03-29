@@ -20,7 +20,11 @@ var publicSignature = null;
 var display = null;
 var map = {};
 
+var conversations = [];
+var groups = [];
+
 var loaded = null;
+var isGroup = false;
 var otherdisplay = null;
 var received_messages = [];
 var sent_messages = [];
@@ -127,9 +131,13 @@ function initialize() {
         });
     });
 
-    database.ref("/users/" + auth.currentUser.uid + "/conversations").on('child_added', (sent) => {
-        add_to_map(sent.key)
-    }); 
+    database.ref("/users/" + auth.currentUser.uid + "/conversations").on('child_added', (conversation) => {
+        add_to_conversations(conversation.key);
+    });
+
+    database.ref("/users/" + auth.currentUser.uid + "/groups").on('child_added', (group) => {
+        add_to_groups(group.key);
+    });
 }
 
 async function add_to_map(uid) {
@@ -149,18 +157,34 @@ async function add_to_map(uid) {
             srx : serverkeys.sharedRx,
             stx : serverkeys.sharedTx
         };
-        update_conversations();
     }
 }
 
+async function add_to_conversations(uid) {
+    await add_to_map(uid);
+    conversations.push(uid);
+    update_conversations();
+}
+
+async function add_to_groups(groupId) {
+    for (member of await get_group_members(groupId))
+        await add_to_map(member);
+    groups.push(groupId);
+    update_groups();
+}
+
 async function send_conversation_invite(uid) {
-    await database.ref("/invites/" + uid + "/conversations/" + auth.currentUser.uid).set(true);
-    await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
+    if (!(await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).get()).exists()) {
+        await database.ref("/invites/" + uid + "/conversations/" + auth.currentUser.uid).set(true);
+        await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
+    }
 }
 
 async function send_group_invite(groupId, uid) {
-    await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
-    await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
+    if (!(await database.ref("/groups/" + groupId + "/members/" + uid).get()).exists()) {
+        await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
+        await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
+    }
 }
 
 async function accept_conversation_invite(uid) {
@@ -170,7 +194,7 @@ async function accept_conversation_invite(uid) {
 
 async function accept_group_invite(groupId) {
     await database.ref("/invites/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
-    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + uid).set(true);
+    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId).set(true);
 }
 
 async function reject_conversation_invite(uid) {
@@ -180,7 +204,7 @@ async function reject_conversation_invite(uid) {
 
 async function reject_group_invite(groupId) {
     await database.ref("/invites/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
-    // await database.ref("/users/" + auth.currentUser.uid + "/groups/" + uid).set(null);
+    await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(null);
 }
 
 
@@ -195,24 +219,34 @@ async function get_invites() {
             });
         });
     });
+
+    await database.ref("/invites/" + auth.currentUser.uid + "/groups/").on("value", (groups) => {
+        invites = []
+        update_invites();
+        groups.forEach((group) => {
+            invites.push("<h3>You have been invited to a group chat!</h3><br><h5>GroupId: " + group.key + "</h5><br><button onclick=\"accept_group_invite('" + group.key + "')\">Accept</button><button onclick=\"reject_group_invite('" + group.key + "')\">Reject</button>") ;    
+            update_invites();
+        });
+    });
 }
 
 
 
 
-async function create_group() {
+async function new_group() {
     var groupId = sodium.to_hex(sodium.crypto_generichash(16, sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)))
-    await database.ref("/groups/" + groupId + "/admin/" + auth.currentUser.uid).set(true);
+    await database.ref("/groups/" + groupId + "/admins/" + auth.currentUser.uid).set(true);
     await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(true);
+    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId).set(true);
 }
 
 
 
 async function send_message(uid, message) {
     await add_to_map(uid);
-    message = await sign_message(message);
+    msg = await sign_message(message);
     nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-    encrypted = sodium.crypto_secretbox_easy(message, nonce, map[uid].ctx);
+    encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
 
     var payload = {
         timestamp : new Date().getTime(),
@@ -242,7 +276,7 @@ async function send_file(uid, file) {
             nonce : sodium.to_hex(nonce),
             type : file.type
         }
-        
+
         await send_conversation_invite(uid);
         await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
 
@@ -253,6 +287,33 @@ async function send_file(uid, file) {
     } else {
         console.err("Size of file is too big!");
     }
+}
+
+async function get_group_members(groupId) {
+    var members = (await database.ref("/groups/" + groupId + "/members").get()).val();
+    return Object.keys(members);
+}
+
+async function send_group_message(groupId, message) {
+    for (uid of await get_group_members(groupId)) {
+        await add_to_map(uid);
+        msg = await sign_message(message);
+        nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+
+        var payload = {
+            timestamp : new Date().getTime(),
+            payload : sodium.to_hex(encrypted),
+            nonce : sodium.to_hex(nonce)
+        };
+
+        await send_group_invite(groupId, uid);
+        await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload);
+    }
+}
+
+async function send_group_file(groupId, file) {
+
 }
 
 async function get_received_messages(uid) {
@@ -335,6 +396,99 @@ async function get_sent_messages(uid) {
     });
 }
 
+
+async function get_received_group_messages(groupId) {
+    received_messages = [];
+    for (uid of await get_group_members(groupId)) {
+        if (uid != auth.currentUser.uid) {
+            get_received_group_messages_from_uid(groupId, uid);
+        }
+    }
+}
+
+async function get_received_group_messages_from_uid(groupId, uid) {
+    return database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + uid).on('child_added', (message) => {
+        nonce = sodium.from_hex(message.child('nonce').val());
+        payload = sodium.from_hex(message.child('payload').val());
+        timestamp = message.child('timestamp').val();
+        type = message.child('type').val();
+
+        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
+
+        if(type == null) {
+            output = {
+                message: sodium.to_string(verify_message(decrypted, map[uid].signature)),
+                timestamp: timestamp,
+                uid: uid
+            }
+        } else {
+
+            decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
+
+            if(type.indexOf('image') >= 0){
+                output = {
+                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
+                    type: type,
+                    timestamp: timestamp,
+                    uid: uid
+                }
+            } else {
+                output = {
+                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
+                    type: type,
+                    timestamp: timestamp,
+                    uid: uid
+                }
+            }
+        }
+
+        received_messages.push(output);
+        update_messages();
+    });
+}
+
+async function get_sent_group_messages(groupId) {
+    sent_messages = [];
+    return database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + auth.currentUser.uid).on('child_added', (message) => {
+        nonce = sodium.from_hex(message.child('nonce').val());
+        payload = sodium.from_hex(message.child('payload').val());
+        timestamp = message.child('timestamp').val();
+        type = message.child('type').val();
+
+        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[auth.currentUser.uid].ctx);
+
+        if(type == null) {
+            output = {
+                message: sodium.to_string(verify_message(decrypted, publicSignature)),
+                timestamp: timestamp,
+                uid: uid
+            }
+        } else {
+
+            decrypted = verify_message(pako.inflate(decrypted), publicSignature);
+
+            if(type.indexOf('image') >= 0){
+                output = {
+                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
+                    type: type,
+                    timestamp: timestamp,
+                    uid: uid
+                }
+            } else {
+                output = {
+                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
+                    type: type,
+                    timestamp: timestamp,
+                    uid: uid
+                }
+            }
+        }
+
+        sent_messages.push(output);
+        update_messages();
+    });
+}
+
 function new_conversation() {
     unload_conversation();
     var uid = document.getElementById('new-conversation-uid').value;
@@ -345,7 +499,7 @@ function new_conversation() {
 }
 
 function load_conversation(uid) {
-    unload_conversation();
+    unload();
     loaded = uid;
     otherdisplay = map[uid].display;
     get_received_messages(uid);
@@ -357,8 +511,8 @@ function load_conversation(uid) {
 
 function unload_conversation() {
     if(loaded != null) {
-        database.ref("/users/" + loaded + "/messages/" + auth.currentUser.uid).off();
-        database.ref("/users/" + auth.currentUser.uid + "/messages/" + loaded).off();
+        //database.ref("/users/" + loaded + "/messages/" + auth.currentUser.uid).off();
+        //database.ref("/users/" + auth.currentUser.uid + "/messages/" + loaded).off();
         loaded = null;
         otherdisplay = null;
         received_messages = [];
@@ -366,6 +520,37 @@ function unload_conversation() {
         update_messages();
         document.getElementById('message-container').innerHTML = "";
     }
+}
+
+function load_group(groupId) {
+    unload()
+    loaded = groupId; 
+    isGroup = true;
+    get_received_group_messages(groupId);
+    get_sent_group_messages(groupId);
+
+    var container = document.getElementById('message-container');
+    container.innerHTML = "<input type=\"text\" id=\"message-box\"><button onclick=\"send_group_message(\'" + groupId+ "\', " + "document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_group_file(\'" + groupId + "\', document.getElementById('file-upload').files[0]);\">Send File</button>";
+}
+
+function unload_group() {
+    if(loaded != null && isGroup) {
+        loaded = null;
+        isGroup = false;
+        otherdisplay = null;
+        received_messages = [];
+        sent_messages = [];
+        update_messages();
+        document.getElementById('message-container').innerHTML = "";
+    }
+}
+
+function unload() {
+    if (loaded != null)
+        if (isGroup)
+            unload_group();
+        else
+            unload_conversation();
 }
 
 function update_messages() {
@@ -376,14 +561,14 @@ function update_messages() {
         if (rcount < received_messages.length)
             if(scount < sent_messages.length)
                 if (rcount < received_messages.length && received_messages[rcount].timestamp <= sent_messages[scount].timestamp){
-                    container.innerHTML += "<div class=\"other\"><h2>" + otherdisplay + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
+                    container.innerHTML += "<div class=\"other\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
                     rcount++;
                 } else {
                     container.innerHTML += "<div class=\"you\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3><br></div>"
                     scount++;
                 }
             else {
-                container.innerHTML += "<div class=\"other\"><h2>" + otherdisplay + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
+                container.innerHTML += "<div class=\"other\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
                 rcount++;
             }
         else {
@@ -398,8 +583,16 @@ function update_messages() {
 function update_conversations() {
     var container = document.getElementById('conversations-container');
     container.innerHTML = "";
-    Object.keys(map).forEach((key) => {
-      container.innerHTML += "<div class=\"conversation\" onclick=\"load_conversation(\'" + key + "\')\"><h3>" + map[key].display + "</h3><br>" + key + "</div> <br>"
+    conversations.forEach((uid) => {
+        container.innerHTML += "<div class=\"conversation\" onclick=\"load_conversation(\'" + uid + "\')\"><h3>" + map[uid].display + "</h3><br>" + uid + "</div> <br>"
+    });
+}
+
+function update_groups() {
+    var container = document.getElementById('groups-container');
+    container.innerHTML = "";
+    groups.forEach((groupId) => {
+        container.innerHTML += "<div class=\"group\" onclick=\"load_group(\'" + groupId + "\')\"><h3>" + groupId + "</h3></div> <br>"
     });
 }
 

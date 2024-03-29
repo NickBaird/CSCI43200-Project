@@ -32,6 +32,18 @@
     <button onclick="new_conversation();">Start Conversation</button>
 </div>
 
+<div class="con" id="new-group-container">
+    <h1>Start Group Chat:</h1><br>
+    <button onclick="new_group();">Start Group</button>
+</div>
+
+<div class="con" id="invite-group-container">
+    <h1>Invite To Group</h1><br>
+    <p>Group ID:</p><input type="text" id="new-group-id"> <br>
+    <p>User ID:</p><input type="text" id="new-group-uid"><br>
+    <button onclick="send_group_invite(document.getElementById('new-group-id').value, document.getElementById('new-group-uid').value)">Invite to Group</button>
+</div>
+
 <div class="con">
     <h1>Invites:</h1>
     <div id="invites-container">
@@ -44,6 +56,10 @@
     <div id="conversations-container">
     
 
+    </div>
+    <h1>Groups:</h1>
+    <div id="groups-container">
+        
     </div>
 </div>
 
