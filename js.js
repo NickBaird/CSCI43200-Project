@@ -285,7 +285,7 @@ async function send_file(uid, file) {
         //database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
         //database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
     } else {
-        console.err("Size of file is too big!");
+        alert("Size of file is too big!");
     }
 }
 
@@ -313,7 +313,41 @@ async function send_group_message(groupId, message) {
 }
 
 async function send_group_file(groupId, file) {
+    if (file.size <= 100000) {
 
+        var fileKey = sodium.randombytes_buf(sodium.crypto_secretbox_KEYBYTES);
+        var fileNonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        var fileContents = await sign_message(new Uint8Array(await file.arrayBuffer()));
+        var encryptedFile = sodium.crypto_secretbox_easy(await pako.gzip(fileContents), fileNonce, fileKey)
+
+        var payload = {
+                timestamp : new Date().getTime(),
+                payload : sodium.to_hex(encryptedFile),
+                nonce : sodium.to_hex(fileNonce),
+                type : file.type
+            }
+
+        await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/files/" + sodium.to_hex(fileNonce)).set(payload);
+
+        for (uid of await get_group_members(groupId)) {
+            await add_to_map(uid);
+            msg = await sign_message(fileKey);
+            nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+            encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+
+            var payload = {
+                timestamp : new Date().getTime(),
+                payload : sodium.to_hex(encrypted),
+                nonce : sodium.to_hex(nonce),
+                id: sodium.to_hex(fileNonce)
+            };
+
+            await send_group_invite(groupId, uid);
+            await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload);
+        }
+    } else {
+        alert("Size of file is too big!");
+    }
 }
 
 async function get_received_messages(uid) {
@@ -329,7 +363,8 @@ async function get_received_messages(uid) {
         if(type == null) {
             output = {
                 message: sodium.to_string(verify_message(decrypted, map[uid].signature)),
-                timestamp: timestamp
+                timestamp: timestamp,
+                uid: uid
             }
         } else {
 
@@ -339,13 +374,15 @@ async function get_received_messages(uid) {
                 output = {
                     message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
                     type: type,
-                    timestamp: timestamp
+                    timestamp: timestamp,
+                    uid: uid
                 }
             } else {
                 output = {
                     message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
                     type: type,
-                    timestamp: timestamp
+                    timestamp: timestamp,
+                    uid: uid
                 }
             }
         }
@@ -370,7 +407,8 @@ async function get_sent_messages(uid) {
         if(type == null) {
             output = {
                 message: sodium.to_string(verify_message(decrypted, publicSignature)),
-                timestamp: timestamp
+                timestamp: timestamp,
+                uid: uid
             }
         } else {
 
@@ -380,13 +418,15 @@ async function get_sent_messages(uid) {
                 output = {
                     message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
                     type: type,
-                    timestamp: timestamp
+                    timestamp: timestamp,
+                    uid: uid
                 }
             } else {
                 output = {
                     message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
                     type: type,
-                    timestamp: timestamp
+                    timestamp: timestamp,
+                    uid: uid
                 }
             }
         }
@@ -411,40 +451,52 @@ async function get_received_group_messages_from_uid(groupId, uid) {
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
-        type = message.child('type').val();
+        id = message.child('id').val();
 
         decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
 
-        if(type == null) {
+        if(id == null) {
             output = {
                 message: sodium.to_string(verify_message(decrypted, map[uid].signature)),
                 timestamp: timestamp,
                 uid: uid
-            }
+            };
+            received_messages.push(output);
+            update_messages();
         } else {
-
-            decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
-
-            if(type.indexOf('image') >= 0){
-                output = {
-                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
-                    type: type,
-                    timestamp: timestamp,
-                    uid: uid
-                }
-            } else {
-                output = {
-                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
-                    type: type,
-                    timestamp: timestamp,
-                    uid: uid
-                }
-            }
+            get_group_file_from_id(groupId, uid, id, decrypted, timestamp, true);
         }
-
-        received_messages.push(output);
-        update_messages();
     });
+}
+
+async function get_group_file_from_id(groupId, uid, fileId, key, timestamp, received) {
+    file = (await database.ref("/group_messages/" + groupId + "/" + uid + "/files/" + fileId).get()).val();
+    console.log(file);
+    decrypted = sodium.crypto_secretbox_open_easy(sodium.from_hex(file['payload']), sodium.from_hex(file['nonce']), verify_message(key, map[uid].signature));
+    decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
+
+    if(file['type'].indexOf('image') >= 0){
+        output = {
+            message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: file['type'] })) + "\" />",
+            type: file['type'],
+            timestamp: timestamp,
+            uid: uid
+        }
+    } else {
+        output = {
+            message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: file['type'] })) + "\" >Download File</a><br><h6>Filetype: " + file['type'] + "</h6>",
+            type: file['type'],
+            timestamp: timestamp,
+            uid: uid
+        }
+    }
+
+    if (received) {
+        received_messages.push(output);
+    } else {
+        sent_messages.push(output);
+    }
+    update_messages();
 }
 
 async function get_sent_group_messages(groupId) {
@@ -453,39 +505,21 @@ async function get_sent_group_messages(groupId) {
         nonce = sodium.from_hex(message.child('nonce').val());
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
-        type = message.child('type').val();
+        id = message.child('id').val();
 
         decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[auth.currentUser.uid].ctx);
 
-        if(type == null) {
+        if(id == null) {
             output = {
                 message: sodium.to_string(verify_message(decrypted, publicSignature)),
                 timestamp: timestamp,
                 uid: uid
             }
+            sent_messages.push(output);
+            update_messages();
         } else {
-
-            decrypted = verify_message(pako.inflate(decrypted), publicSignature);
-
-            if(type.indexOf('image') >= 0){
-                output = {
-                    message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
-                    type: type,
-                    timestamp: timestamp,
-                    uid: uid
-                }
-            } else {
-                output = {
-                    message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
-                    type: type,
-                    timestamp: timestamp,
-                    uid: uid
-                }
-            }
+            get_group_file_from_id(groupId, auth.currentUser.uid, id, decrypted, timestamp, false);
         }
-
-        sent_messages.push(output);
-        update_messages();
     });
 }
 
@@ -557,6 +591,10 @@ function update_messages() {
     var container = document.getElementById('messages-container');
     container.innerHTML = "";
     var rcount = 0, scount = 0;
+
+    sent_messages.sort((a, b) => a.timestamp - b.timestamp);
+    received_messages.sort((a, b) => a.timestamp - b.timestamp);
+
     while(true) {
         if (rcount < received_messages.length)
             if(scount < sent_messages.length)
