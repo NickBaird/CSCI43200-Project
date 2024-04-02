@@ -25,6 +25,17 @@ p {
 	background-color: #c0392b;
 }
 
+.group {
+	background-color: #9b59b6;
+	padding: 10px;
+	border-radius: 15px;
+}
+
+.group:hover {
+	background-color: #8e44ad;
+}
+
+
 .invite {
 	background-color: #e67e22;
 	padding: 10px;
