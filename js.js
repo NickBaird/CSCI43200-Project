@@ -22,6 +22,7 @@ var map = {};
 
 var conversations = [];
 var groups = [];
+var groupNames = {};
 
 var loaded = null;
 var isGroup = false;
@@ -185,6 +186,7 @@ async function add_to_groups(groupId) {
         console.log("Added Member", member.key);
     });        
     groups.push(groupId);
+    group_name_listener(groupId);
     update_groups();
 }
 
@@ -200,6 +202,7 @@ async function send_group_invite(groupId, uid) {
     if (!(await database.ref("/groups/" + groupId + "/members/" + uid).get()).exists()) {
         await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
         await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
+        await set_group_name_for_uid(groupId, groupNames[groupId], uid);
     }
 }
 
@@ -269,12 +272,61 @@ async function promote_admin(groupId, uid) {
 async function kick_user(groupId, uid) {
     if (await is_admin()) {
         // Kick user
+    } else {
+        // Prompt user is not admin
     }
 }
 
+async function get_group_name(groupId) {
+    var message = (await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/name/").get());
+    var nonce = sodium.from_hex(message.child('nonce').val());
+    var payload = sodium.from_hex(message.child('payload').val());
+    var timestamp = message.child('timestamp').val();
+    var from = message.child('from').val();
 
+    await add_to_map(from);
+    var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[from].srx);
+    return sodium.to_string(verify_message(decrypted, map[from].signature));
+}
 
+function group_name_listener(groupId) {
+    database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/name/").on('value', (message) => {
+        get_group_name(groupId).then((name) => {
+            groupNames[groupId] = name;
+            update_groups();
+        });
+    }); 
+}
 
+async function set_group_name(groupId, name) {
+    if(await is_admin(groupId)) {
+        for(member of await get_group_members(groupId)) {
+            set_group_name_for_uid(groupId, name, member);
+        }
+    } else {
+        // Prompt user is not admin
+    }
+}
+
+async function set_group_name_for_uid(groupId, name, uid) {
+    if(await is_admin(groupId)) {
+        await add_to_map(uid);
+        msg = await sign_message(name);
+        nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+
+        var payload = {
+            timestamp : new Date().getTime(),
+            payload : sodium.to_hex(encrypted),
+            nonce : sodium.to_hex(nonce),
+            from: auth.currentUser.uid
+        };
+
+        await database.ref("/group_messages/" + groupId + "/" + uid + "/name").set(payload);
+    } else {
+        // Prompt user is not admin
+    }
+}
 
 
 async function get_invites() {
@@ -428,7 +480,6 @@ async function get_received_messages(uid) {
         payload = sodium.from_hex(message.child('payload').val());
         timestamp = message.child('timestamp').val();
         type = message.child('type').val();
-
         decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
 
         if(type == null) {
@@ -770,7 +821,7 @@ function update_groups() {
     var container = document.getElementById('groups-container');
     container.innerHTML = "";
     groups.forEach((groupId) => {
-        container.innerHTML += "<div class=\"group\" onclick=\"load_group(\'" + groupId + "\')\"><h3>" + groupId + "</h3></div> <br>"
+        container.innerHTML += "<div class=\"group\" onclick=\"load_group(\'" + groupId + "\')\"><h3>" + groupNames[groupId] + "</h3><br><p>" + groupId + "</p></div> <br>"
     });
 }
 
