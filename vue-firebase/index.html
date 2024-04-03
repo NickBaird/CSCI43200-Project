@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="css.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSCI 432 Project</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div class="con">
+      <h1>Register</h1> <br>
+      <p>Email:</p> <input type="text" id="register-email"> <br>
+      <p>Password:</p><input type="text" id="register-password"> <br>
+      <p>Display Name:</p><input type="text" id="register-display"> <br>
+      <button onclick="register();">Register</button>
+  
+      <br>
+      <h1>Login</h1> <br>
+      <p>Email:</p><input type="text" id="login-email"> <br>
+      <p>Password:</p><input type="text" id="login-password"> <br>
+      <button onclick="login();">Login</button>
+  </div>
+  
+  <div class="con" id="user-container">
+      
+  </div>
+  
+  <div class="con" id="new-conversation-container">
+      <h1>Start Conversation:</h1> <br>
+      <p>User ID:</p><input type="text" id="new-conversation-uid"> <br>
+      <p>Message:</p><input type="text" id="new-conversation-message"> <br>
+      <button onclick="new_conversation();">Start Conversation</button>
+  </div>
+  
+  <div class="con">
+      <h1>Invites:</h1>
+      <div id="invites-container">
+          
+      </div>
+  </div>
+  
+  <div class="con">
+      <h1>Conversations:</h1>
+      <div id="conversations-container">
+      
+  
+      </div>
+  </div>
+  
+  
+  
+  <div class="con" id="messages-container">
+  
+  </div>
+  
+  <div class="con" id="message-container">
+      
+  
+  </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script src="libsodium.js" ></script>
+    <script src="libsodium-wrappers.js" ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.3/pako.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <script src="js.js" type="text/javascript"></script>
+  </body>
+</html>
