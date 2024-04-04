@@ -1,11 +1,11 @@
 import {createRouter, createWebHistory} from 'vue-router';
-import SessionsView from '../views/SessionsView.vue';
+import MainView from '../views/MainView.vue';
 
 const routes = [
     {
         path: '/',
         name: 'home',
-        component: SessionsView
+        component: MainView
     }
 ]
 

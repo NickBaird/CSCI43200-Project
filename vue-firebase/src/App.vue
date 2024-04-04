@@ -12,19 +12,11 @@ export default {
   },
   data() {
     return {
-      sessions: [],
-      userSessions: []
-    }
-  },
-  provide() {
-    return {
-      sessions: this.sessions,
     }
   },
   methods: {
 
-  },
-  emits: ['addItem']
+  }
 }
 </script>
 

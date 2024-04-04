@@ -1,9 +1,5 @@
 <template>
 <main>
-    <h1>Messaging Information</h1>
-    <div class="row">
-        <h2>{{ updateCount }}</h2>
-    </div>
     <register-login></register-login>
 </main>
 </template>
@@ -12,14 +8,9 @@
 export default {
     data() {
         return {
-            sessionCount: this.sessions.length,
         }
     },
-    inject: ['sessions'],
     computed: {
-        updateCount() {
-            return `${this.sessions.length} Sessions:`;
-        }
     },
     methods: {
     },
