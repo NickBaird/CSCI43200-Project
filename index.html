@@ -34,7 +34,8 @@
 
 <div class="con" id="new-group-container">
     <h1>Start Group Chat:</h1><br>
-    <button onclick="new_group();">Start Group</button>
+    <p>Group Name:</p><input type="text" id="new-group-name"> <br>
+    <button onclick="new_group(document.getElementById('new-group-name').value);">Start Group</button>
 </div>
 
 <div class="con" id="invite-group-container">

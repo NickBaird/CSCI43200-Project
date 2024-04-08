@@ -12,9 +12,6 @@ const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-const dbName = 'testdatabase3';
-const dbVersion = 4;
-
 var public = null;
 var publicSignature = null;
 var display = null;
@@ -23,6 +20,7 @@ var map = {};
 var conversations = [];
 var groups = [];
 var groupNames = {};
+var groupsInvalid = [];
 
 var loaded = null;
 var isGroup = false;
@@ -41,6 +39,38 @@ var unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
         unsubscribe();
     }
 });
+
+
+
+// Indexed DB name and version number
+const dbName = 'testdatabase4';
+const dbVersion = 7;
+
+// Opens the indexed DB
+const indexed = window.indexedDB.open(dbName, dbVersion);
+let indexedDB = null;
+
+// Cannot open indexed DB
+indexed.onerror = (event) => {
+    console.error("An error occurred with IndexedDB. This means private keys are not retreivable.");
+    console.error(event);
+};
+
+// Used to update the database (if version number changes) to add/change object stores
+indexed.onupgradeneeded = (event) => {
+    const db = event.target.result;
+    if (!db.objectStoreNames.contains('keys')) {
+        db.createObjectStore('keys', { keyPath: 'uid' });
+    }
+    if (!db.objectStoreNames.contains('signature')) {
+        db.createObjectStore('signature', { keyPath: 'uid' });
+    }
+};
+
+// Opens indexed DB successfully allowing for transactions to be made
+indexed.onsuccess = (event) => {
+    indexedDB = event.target.result;
+};
 
 
 
@@ -63,49 +93,8 @@ function register() {
         };
         database.ref('/users/' + auth.currentUser.uid).set(userData);
 
-        // TEMP
-        localStorage.setItem("private", sodium.to_hex(keys.privateKey));
-        localStorage.setItem("signature", sodium.to_hex(signing.privateKey));
-
-        const indexed = window.indexedDB.open(dbName, dbVersion);
-
-        indexed.onupgradeneeded = function(event) {
-
-            console.log("UPGRADE")
-            const db = event.target.result;
-            // Check if the object store 'keys' exists
-            if (!db.objectStoreNames.contains('keys')) {
-                const objectStore = db.createObjectStore('keys', { keyPath: 'uid' });
-            }
-
-            if(!db.objectStoreNames.contains('signature')) {
-                const objectStore = db.createObjectStore('signature', { keyPath: 'uid' });
-            }
-        };
-
-        indexed.onsuccess = function(event) {
-            console.log("SUCCESS");
-
-            const db = event.target.result;
-
-            var transaction = db.transaction(['keys'], 'readwrite');
-            var objectStore = transaction.objectStore('keys');
-            var keyData = { uid: auth.currentUser.uid, privateKey: sodium.to_hex(keys.privateKey) };
-            var request = objectStore.put(keyData);
-
-            var transaction = db.transaction(['signature'], 'readwrite');
-            var objectStore = transaction.objectStore('signature');
-            var keyData = { uid: auth.currentUser.uid, privateKey: sodium.to_hex(signing.privateKey) };
-            var request = objectStore.put(keyData);
-
-            request.onsuccess = function(event) {
-                console.log('Private key stored successfully');
-            };
-
-            request.onerror = function(event) {
-                console.error('Error storing private key');
-            };
-        };      
+        set_private(sodium.to_hex(keys.privateKey));
+        set_signature(sodium.to_hex(signing.privateKey));
     });
 }
 
@@ -119,15 +108,23 @@ function login() {
 
 }
 
+async function change_display_name(name) {
+    await database.ref('/users/' + auth.currentUser.uid + "/display").set(name);
+}
+
 
 async function initialize() {
     console.log("INIT");
 
     public = (await database.ref("/users/" + auth.currentUser.uid + "/public").get()).val();
     publicSignature = (await database.ref("/users/" + auth.currentUser.uid + "/signature").get()).val();
-    display = (await database.ref("/users/" + auth.currentUser.uid + "/display").get()).val();
 
-    document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
+    database.ref("/users/" + auth.currentUser.uid + "/display").on('value', (value) => {
+        display = value.val();
+        document.getElementById('user-container').innerHTML = "<h1>Welcome " + display + "!</h1> <br><p>User ID: " + auth.currentUser.uid + "</p>";
+    });
+
+    
     get_invites();
 
     /*
@@ -143,13 +140,23 @@ async function initialize() {
         });
     });*/
 
-    database.ref("/users/" + auth.currentUser.uid + "/conversations").on('child_added', (conversation) => {
+    conversationsRef = database.ref("/users/" + auth.currentUser.uid + "/conversations");
+    conversationsRef.on('child_added', (conversation) => {
         add_to_conversations(conversation.key);
     });
 
-    database.ref("/users/" + auth.currentUser.uid + "/groups").on('child_added', (group) => {
+    conversationsRef.on('child_removed', (conversation) => {
+        remove_from_conversations(conversation.key);
+    });
+
+    groupsRef = database.ref("/users/" + auth.currentUser.uid + "/groups");
+    groupsRef.on('child_added', (group) => {
         add_to_groups(group.key);
-        console.log("Added Group", group.key);
+    });
+
+    groupsRef.on('child_removed', (group) => {
+        console.log("REMOVE");
+        remove_from_groups(group.key);
     });
 }
 
@@ -180,26 +187,47 @@ async function add_to_conversations(uid) {
     update_conversations();
 }
 
+async function remove_from_conversations(uid) {
+    if (loaded == uid){
+        unload();
+    }
+    conversations.splice(conversations.indexOf(uid), 1);
+    update_conversations();
+}
+
 async function add_to_groups(groupId) {
     database.ref("/groups/" + groupId + "/members").on('child_added', (member) => {
         add_to_map(member.key);
         console.log("Added Member", member.key);
-    });        
+    });
     groups.push(groupId);
+    if(!(await user_has_access(groupId))) {
+        groupsInvalid.push(groupId);
+    }
     group_name_listener(groupId);
+    update_groups();
+}
+
+async function remove_from_groups(groupId) {
+    if (loaded == groupId){
+        unload();
+    }
+    groups.splice(groups.indexOf(groupId), 1);
+    delete groupNames[groupId];
+    delete groupsInvalid[groupId];
     update_groups();
 }
 
 
 async function send_conversation_invite(uid) {
-    if (!(await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).get()).exists()) {
+    if (!(await user_in_conversation(uid))) {
         await database.ref("/invites/" + uid + "/conversations/" + auth.currentUser.uid).set(true);
         await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
     }
 }
 
 async function send_group_invite(groupId, uid) {
-    if (!(await database.ref("/groups/" + groupId + "/members/" + uid).get()).exists()) {
+    if (await is_admin(groupId) && ! (await user_in_group(groupId, uid))) {
         await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
         await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
         await set_group_name_for_uid(groupId, groupNames[groupId], uid);
@@ -228,30 +256,53 @@ async function reject_group_invite(groupId) {
 
 
 async function leave_conversation(uid) {
-    await delete_conversation_messages(uid);
+    //await delete_conversation_messages(uid);
     await database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(null);
 }
 
 async function leave_group(groupId) {
-    await delete_group_messages(groupId);
-    await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(null);
+    //await delete_group_messages(groupId);
+    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
     if (is_admin(groupId)) {
         await database.ref("/groups/" + groupId + "/admins/" + auth.currentUser.uid).set(null);
         // Add assigning another admin if there is only one admin
     }
-    await database.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId).set(null);
-}
-
-async function delete_conversation_messages(uid) {
-    await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).set(null);
+    await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(null);
 }
 
 
-async function delete_group_messages(groupId) {
+async function delete_conversation_message(uid, msgId) {
+    database.ref("/messages/" + uid + "/" + auth.currentUser.uid + "/" + msgId).set(null);
+}
+
+async function delete_all_conversation_messages(uid) {
+    database.ref("/messages/" + uid + "/" + auth.currentUser.uid).set(null);
+}
+
+
+async function delete_group_message(groupId, msgId) {
+    var msg = (await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + auth.currentUser.uid + "/" + msgId).get());
+    var sent = msg.child('sent').val();
+    var fileId = msg.child('id').val();
+
+    if (sent != null) {
+        for (uid of Object.keys(sent)) {
+            database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid + "/" + sent[uid]).set(null);
+        }
+    }
+    database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + auth.currentUser.uid + "/" + msgId).set(null);
+    if (fileId != null) {
+        database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/files/" + fileId).set(null);
+    }
+}
+
+async function delete_all_group_messages(groupId) {
     for (member of await get_group_members(groupId)) {
         database.ref("/group_messages/" + groupId + "/" + member + "/" + auth.currentUser.uid).set(null);
     }
 }
+
+
 
 
 
@@ -260,7 +311,12 @@ async function get_admins(groupId) {
 }
 
 async function is_admin(groupId) {
-    return (await get_admins(groupId)).includes(auth.currentUser.uid);
+    try {
+        return (await get_admins(groupId)).includes(auth.currentUser.uid);
+    } catch(e) {
+        console.error(e);
+        return false;
+    }
 }
 
 async function promote_admin(groupId, uid) {
@@ -270,23 +326,60 @@ async function promote_admin(groupId, uid) {
 }
 
 async function kick_user(groupId, uid) {
-    if (await is_admin()) {
-        // Kick user
+    if (uid != auth.currentUser.uid && await is_admin(groupId)) {
+        database.ref("/groups/" + groupId + "/admins/" + uid).set(null);
+        database.ref("/groups/" + groupId + "/members/" + uid).set(null);
     } else {
         // Prompt user is not admin
     }
 }
 
+async function block_conversation(uid) {
+    await database.ref("/blocked/" + auth.currentUser.uid + "/conversations/" + uid).set(true);
+    await leave_conversation(uid);
+}
+
+async function block_group(groupId) {
+    await database.ref("/blocked/" + auth.currentUser.uid + "/groups/" + groupId).set(true);
+    await leave_group(groupId);
+    update_groups();
+}
+
+async function is_blocked(uid) {
+    return (await database.ref("/blocked/" + uid + "/conversations/" + auth.currentUser.uid).get()).exists();
+}
+
+async function user_in_conversation(uid) {
+    return (await database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).get()).exists();
+}
+
+async function user_in_group(groupId, uid) {
+    return (await database.ref("/groups/" + groupId + "/members/" + uid).get()).exists() && (await database.ref("/users/" + uid + "/groups/" + groupId).get()).exists();
+}
+
+async function user_has_access(groupId) {
+    try {
+        return (await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).get()).exists();
+    } catch(error) {
+        return false;
+    }
+}
+
+
 async function get_group_name(groupId) {
     var message = (await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/name/").get());
-    var nonce = sodium.from_hex(message.child('nonce').val());
-    var payload = sodium.from_hex(message.child('payload').val());
-    var timestamp = message.child('timestamp').val();
-    var from = message.child('from').val();
+    if (message.exists()) {
+        var nonce = sodium.from_hex(message.child('nonce').val());
+        var payload = sodium.from_hex(message.child('payload').val());
+        var timestamp = message.child('timestamp').val();
+        var from = message.child('from').val();
 
-    await add_to_map(from);
-    var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[from].srx);
-    return sodium.to_string(verify_message(decrypted, map[from].signature));
+        await add_to_map(from);
+        var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[from].srx);
+        return sodium.to_string(verify_message(decrypted, map[from].signature));
+    } else {
+        return null;
+    }
 }
 
 function group_name_listener(groupId) {
@@ -305,8 +398,13 @@ async function set_group_name(groupId, name) {
         }
     } else {
         // Prompt user is not admin
+        console.log("NOT ADMIN");
     }
 }
+
+
+
+
 
 async function set_group_name_for_uid(groupId, name, uid) {
     if(await is_admin(groupId)) {
@@ -344,8 +442,10 @@ async function get_invites() {
     await database.ref("/invites/" + auth.currentUser.uid + "/groups/").on("value", (groups) => {
         group_invites = [];
         groups.forEach((group) => {
-            group_invites.push("<h3>You have been invited to a group chat!</h3><br><h5>GroupId: " + group.key + "</h5><br><button onclick=\"accept_group_invite('" + group.key + "')\">Accept</button><button onclick=\"reject_group_invite('" + group.key + "')\">Reject</button>") ;    
-            update_invites(); // I don't like this
+            get_group_name(group.key).then((name) => {
+                group_invites.push("<h3>You have been invited to a group chat!</h3><h4>Group Name: " + name + "</h4><h5>GroupId: " + group.key + "</h5><br><button onclick=\"accept_group_invite('" + group.key + "')\">Accept</button><button onclick=\"reject_group_invite('" + group.key + "')\">Reject</button>") ;    
+                update_invites(); // I don't like this
+            });
         });
         update_invites();
     });
@@ -354,20 +454,21 @@ async function get_invites() {
 
 
 
-async function new_group() {
+async function new_group(name) {
     var groupId = sodium.to_hex(sodium.crypto_generichash(16, sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)))
     await database.ref("/groups/" + groupId + "/admins/" + auth.currentUser.uid).set(true);
     await database.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid).set(true);
     await database.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId).set(true);
+    await set_group_name(groupId, name);
 }
 
 
 
 async function send_message(uid, message) {
     await add_to_map(uid);
-    msg = await sign_message(message);
-    nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-    encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+    var msg = await sign_message(message);
+    var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+    var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
 
     var payload = {
         timestamp : new Date().getTime(),
@@ -377,34 +478,24 @@ async function send_message(uid, message) {
 
     await send_conversation_invite(uid);
     await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
-    
-    // OLD
-    //await database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
-    //database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
-    //database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
 }
 
 async function send_file(uid, file) {
     if (file.size <= 100000) {
         await add_to_map(uid);
         var contents = await sign_message(new Uint8Array(await file.arrayBuffer()));
-        nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        encrypted = sodium.crypto_secretbox_easy(await pako.gzip(contents), nonce, map[uid].ctx);
+        var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        var encrypted = sodium.crypto_secretbox_easy(await pako.gzip(contents), nonce, map[uid].ctx);
 
         var payload = {
             timestamp : new Date().getTime(),
             payload : sodium.to_hex(encrypted),
             nonce : sodium.to_hex(nonce),
             type : file.type
-        }
+        };
 
         await send_conversation_invite(uid);
         await database.ref("/messages/" + uid + "/" + auth.currentUser.uid).push(payload);
-
-        // OLD
-        //database.ref("/users/" + uid + "/messages/" + auth.currentUser.uid).push(payload);
-        //database.ref("/users/" + auth.currentUser.uid + "/conversations/" + uid).set(1);
-        //database.ref("/users/" + uid + "/conversations/" + auth.currentUser.uid).set(1);
     } else {
         alert("Size of file is too big!");
     }
@@ -416,20 +507,34 @@ async function get_group_members(groupId) {
 }
 
 async function send_group_message(groupId, message) {
-    for (uid of await get_group_members(groupId)) {
+    var sent = {}
+    var members = await get_group_members(groupId)
+    members.splice(members.indexOf(auth.currentUser.uid), 1);
+    members.push(auth.currentUser.uid);
+    
+    for (uid of members) {
         await add_to_map(uid);
-        msg = await sign_message(message);
-        nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+        var msg = await sign_message(message);
+        var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
 
-        var payload = {
-            timestamp : new Date().getTime(),
-            payload : sodium.to_hex(encrypted),
-            nonce : sodium.to_hex(nonce)
-        };
-
+        var payload = null
+        if (uid == auth.currentUser.uid) {
+            var payload = {
+                timestamp : new Date().getTime(),
+                payload : sodium.to_hex(encrypted),
+                nonce : sodium.to_hex(nonce),
+                sent : sent
+            };
+        } else {
+            var payload = {
+                timestamp : new Date().getTime(),
+                payload : sodium.to_hex(encrypted),
+                nonce : sodium.to_hex(nonce)
+            };
+        }
         await send_group_invite(groupId, uid);
-        await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload);
+        sent[uid] = (await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload).key);
     }
 }
 
@@ -446,25 +551,41 @@ async function send_group_file(groupId, file) {
                 payload : sodium.to_hex(encryptedFile),
                 nonce : sodium.to_hex(fileNonce),
                 type : file.type
-            }
+            };
 
         await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/files/" + sodium.to_hex(fileNonce)).set(payload);
 
-        for (uid of await get_group_members(groupId)) {
-            await add_to_map(uid);
-            msg = await sign_message(fileKey);
-            nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-            encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+        var sent = {}
+        var members = await get_group_members(groupId)
+        members.splice(members.indexOf(auth.currentUser.uid), 1);
+        members.push(auth.currentUser.uid);
 
-            var payload = {
-                timestamp : new Date().getTime(),
-                payload : sodium.to_hex(encrypted),
-                nonce : sodium.to_hex(nonce),
-                id: sodium.to_hex(fileNonce)
-            };
+        for (uid of members) {
+            await add_to_map(uid);
+            var msg = await sign_message(fileKey);
+            var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+            var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+
+            var payload = null
+            if (uid == auth.currentUser.uid) {
+                var payload = {
+                    timestamp : new Date().getTime(),
+                    payload : sodium.to_hex(encrypted),
+                    nonce : sodium.to_hex(nonce),
+                    id: sodium.to_hex(fileNonce),
+                    sent: sent
+                };
+            } else {
+                var payload = {
+                    timestamp : new Date().getTime(),
+                    payload : sodium.to_hex(encrypted),
+                    nonce : sodium.to_hex(nonce),
+                    id: sodium.to_hex(fileNonce)
+                };
+            }
 
             await send_group_invite(groupId, uid);
-            await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload);
+            sent[uid] = (await database.ref("/group_messages/" + groupId + "/" + uid + "/" + auth.currentUser.uid).push(payload).key);
         }
     } else {
         alert("Size of file is too big!");
@@ -476,11 +597,11 @@ async function get_received_messages(uid) {
     ref = database.ref("/messages/" + auth.currentUser.uid + "/" + uid);
     refs.push(ref);
     ref.on('child_added', (message) => {
-        nonce = sodium.from_hex(message.child('nonce').val());
-        payload = sodium.from_hex(message.child('payload').val());
-        timestamp = message.child('timestamp').val();
-        type = message.child('type').val();
-        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
+        var nonce = sodium.from_hex(message.child('nonce').val());
+        var payload = sodium.from_hex(message.child('payload').val());
+        var timestamp = message.child('timestamp').val();
+        var type = message.child('type').val();
+        var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
 
         if(type == null) {
             output = {
@@ -534,15 +655,14 @@ async function get_sent_messages(uid) {
     ref = database.ref("/messages/" + uid + "/" + auth.currentUser.uid);
     refs.push(ref);
     ref.on('child_added', (message) => {
-        nonce = sodium.from_hex(message.child('nonce').val());
-        payload = sodium.from_hex(message.child('payload').val());
-        timestamp = message.child('timestamp').val();
-        type = message.child('type').val();
-
-        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].ctx);
+        var nonce = sodium.from_hex(message.child('nonce').val());
+        var payload = sodium.from_hex(message.child('payload').val());
+        var timestamp = message.child('timestamp').val();
+        var type = message.child('type').val();
+        var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].ctx);
 
         if(type == null) {
-            output = {
+            var output = {
                 dbid: message.key,
                 message: sodium.to_string(verify_message(decrypted, publicSignature)),
                 timestamp: timestamp,
@@ -553,7 +673,7 @@ async function get_sent_messages(uid) {
             decrypted = verify_message(pako.inflate(decrypted), publicSignature);
 
             if(type.indexOf('image') >= 0){
-                output = {
+                var output = {
                     dbid: message.key,
                     message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" />",
                     type: type,
@@ -561,7 +681,7 @@ async function get_sent_messages(uid) {
                     uid: uid
                 }
             } else {
-                output = {
+                var output = {
                     dbid: message.key,
                     message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: type })) + "\" >Download File</a><br><h6>Filetype: " + type + "</h6>",
                     type: type,
@@ -589,7 +709,6 @@ async function get_sent_messages(uid) {
 
 async function get_received_group_messages(groupId) {
     received_messages = [];
-
     ref = database.ref("/groups/" + groupId + "/members");
     refs.push(ref);
     ref.on("child_added", (member) => {
@@ -604,15 +723,14 @@ async function get_received_group_messages_from_uid(groupId, uid) {
     ref = database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + uid);
     refs.push(ref);
     ref.on('child_added', (message) => {
-        nonce = sodium.from_hex(message.child('nonce').val());
-        payload = sodium.from_hex(message.child('payload').val());
-        timestamp = message.child('timestamp').val();
-        id = message.child('id').val();
-
-        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
+        var nonce = sodium.from_hex(message.child('nonce').val());
+        var payload = sodium.from_hex(message.child('payload').val());
+        var timestamp = message.child('timestamp').val();
+        var id = message.child('id').val();
+        var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[uid].srx);
 
         if(id == null) {
-            output = {
+            var output = {
                 dbid: message.key,
                 message: sodium.to_string(verify_message(decrypted, map[uid].signature)),
                 timestamp: timestamp,
@@ -637,12 +755,12 @@ async function get_received_group_messages_from_uid(groupId, uid) {
 }
 
 async function get_group_file_from_id(groupId, uid, fileId, key, timestamp, dbid, received) {
-    file = (await database.ref("/group_messages/" + groupId + "/" + uid + "/files/" + fileId).get()).val();
-    decrypted = sodium.crypto_secretbox_open_easy(sodium.from_hex(file['payload']), sodium.from_hex(file['nonce']), verify_message(key, map[uid].signature));
-    decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
+    var file = (await database.ref("/group_messages/" + groupId + "/" + uid + "/files/" + fileId).get()).val();
+    var decrypted = sodium.crypto_secretbox_open_easy(sodium.from_hex(file['payload']), sodium.from_hex(file['nonce']), verify_message(key, map[uid].signature));
+    var decrypted = verify_message(pako.inflate(decrypted), map[uid].signature);
 
     if(file['type'].indexOf('image') >= 0){
-        output = {
+        var output = {
             dbid: dbid,
             message: "<img src=\"" + URL.createObjectURL(new Blob([decrypted], { type: file['type'] })) + "\" />",
             type: file['type'],
@@ -650,7 +768,7 @@ async function get_group_file_from_id(groupId, uid, fileId, key, timestamp, dbid
             uid: uid
         }
     } else {
-        output = {
+        var output = {
             dbid: dbid,
             message: "<a href=\"" + URL.createObjectURL(new Blob([decrypted], { type: file['type'] })) + "\" >Download File</a><br><h6>Filetype: " + file['type'] + "</h6>",
             type: file['type'],
@@ -672,15 +790,14 @@ async function get_sent_group_messages(groupId) {
     ref = database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + auth.currentUser.uid);
     refs.push(ref);
     ref.on('child_added', (message) => {
-        nonce = sodium.from_hex(message.child('nonce').val());
-        payload = sodium.from_hex(message.child('payload').val());
-        timestamp = message.child('timestamp').val();
-        id = message.child('id').val();
-
-        decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[auth.currentUser.uid].ctx);
+        var nonce = sodium.from_hex(message.child('nonce').val());
+        var payload = sodium.from_hex(message.child('payload').val());
+        var timestamp = message.child('timestamp').val();
+        var id = message.child('id').val();
+        var decrypted = sodium.crypto_secretbox_open_easy(payload, nonce, map[auth.currentUser.uid].ctx);
 
         if(id == null) {
-            output = {
+            var output = {
                 dbid: message.key,
                 message: sodium.to_string(verify_message(decrypted, publicSignature)),
                 timestamp: timestamp,
@@ -705,21 +822,20 @@ async function get_sent_group_messages(groupId) {
     });
 }
 
-function new_conversation() {
+async function new_conversation() {
     unload_conversation();
     var uid = document.getElementById('new-conversation-uid').value;
     var message = document.getElementById('new-conversation-message').value;
-    console.log(uid + " " + message);
-    send_message(uid, message)
-    load_conversation(uid);
+    await send_message(uid, message)
+    await load_conversation(uid);
 }
 
-function load_conversation(uid) {
+async function load_conversation(uid) {
     unload();
     loaded = uid;
     otherdisplay = map[uid].display;
-    get_received_messages(uid);
-    get_sent_messages(uid);
+    await get_received_messages(uid);
+    await get_sent_messages(uid);
 
     var container = document.getElementById('message-container');
     container.innerHTML = "<input type=\"text\" id=\"message-box\"><button onclick=\"send_message(\'" + uid+ "\', " + "document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file(\'" + uid + "\', document.getElementById('file-upload').files[0]);\">Send File</button>";
@@ -784,24 +900,31 @@ function update_messages() {
     sent_messages.sort((a, b) => a.timestamp - b.timestamp);
     received_messages.sort((a, b) => a.timestamp - b.timestamp);
 
+    var deleteBtn = "";
+    if (isGroup) {
+        deleteBtn = "<button onclick=\"delete_group_message(\'";
+    } else {
+        deleteBtn = "<button onclick=\"delete_conversation_message(\'";
+    }
+
     while(true) {
         if (rcount < received_messages.length)
             if(scount < sent_messages.length)
                 if (rcount < received_messages.length && received_messages[rcount].timestamp <= sent_messages[scount].timestamp){
-                    container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
+                    container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3>" + deleteBtn + loaded + "\',\'" + received_messages[rcount].dbid + "\')\">Delete</button><br></div>";
                     rcount++;
                 } else {
-                    container.innerHTML += "<div class=\"you\" id=\"" + sent_messages[scount].dbid + "\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3><br></div>"
+                    container.innerHTML += "<div class=\"you\" id=\"" + sent_messages[scount].dbid + "\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3>" + deleteBtn + loaded + "\',\'" + sent_messages[scount].dbid + "\')\">Delete</button><br></div>";
                     scount++;
                 }
             else {
-                container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>"
+                container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3>" + deleteBtn + loaded + "\',\'" + received_messages[rcount].dbid + "\')\">Delete</button><br></div>";
                 rcount++;
             }
         else {
             if(scount < sent_messages.length) {
-                container.innerHTML += "<div class=\"you\" id=\"" + sent_messages[scount].dbid + "\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3><br></div>"
-                scount++;
+                container.innerHTML += "<div class=\"you\" id=\"" + sent_messages[scount].dbid + "\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3>" + deleteBtn + loaded + "\',\'" + sent_messages[scount].dbid + "\')\">Delete</button><br></div>";
+                scount++;;
             } else break;
         }
     }
@@ -813,7 +936,7 @@ function update_conversations() {
     var container = document.getElementById('conversations-container');
     container.innerHTML = "";
     conversations.forEach((uid) => {
-        container.innerHTML += "<div class=\"conversation\" onclick=\"load_conversation(\'" + uid + "\')\"><h3>" + map[uid].display + "</h3><br>" + uid + "</div> <br>"
+        container.innerHTML += "<div class=\"conversation\" onclick=\"load_conversation(\'" + uid + "\')\"><h3>" + map[uid].display + "</h3><br>" + uid + "</div> <br>";
     });
 }
 
@@ -821,7 +944,11 @@ function update_groups() {
     var container = document.getElementById('groups-container');
     container.innerHTML = "";
     groups.forEach((groupId) => {
-        container.innerHTML += "<div class=\"group\" onclick=\"load_group(\'" + groupId + "\')\"><h3>" + groupNames[groupId] + "</h3><br><p>" + groupId + "</p></div> <br>"
+        if(!groupsInvalid.includes(groupId)) {
+            container.innerHTML += "<div class=\"group\" onclick=\"load_group(\'" + groupId + "\')\"><h3>" + groupNames[groupId] + "</h3><br><p>" + groupId + "</p></div> <br>";
+        } else {
+            container.innerHTML += "<div class=\"group\"><h3>You have been kicked from this group!</h3><br><p>" + groupId + "</p><br><button onclick=\"leave_group(\'" + groupId + "\')\">Remove from groups</button></div><br>";
+        }
     });
 }
 
@@ -862,35 +989,21 @@ function verify_message(message, public) {
 
 async function get_private() {
     return new Promise((resolve, reject) => {
-        const indexed = window.indexedDB.open(dbName, dbVersion);
-
-        indexed.onsuccess = function(event) {
-
-            const db = event.target.result;
-            if (db.objectStoreNames.contains('keys')) {
-                var transaction = db.transaction(['keys'], 'readonly');
-                var objectStore = transaction.objectStore('keys');
-                var request = objectStore.get(auth.currentUser.uid);
-
-                request.onsuccess = function(event) {
-                    const keyData = event.target.result;
-                    if (keyData) {
-                        console.log('Private key retrieved successfully:', keyData.privateKey);
-                        resolve(keyData.privateKey);
-                    } else {
-                        console.error('Private key not found');
-                        reject(new Error('Private key not found'));
-                    }
-                };
-
-                request.onerror = function(event) {
-                    console.error('Error retrieving private key');
-                    reject(event.target.error);
-                };  
+        var transaction = indexedDB.transaction(['keys'], 'readonly');
+        var objectStore = transaction.objectStore('keys');
+        var request = objectStore.get(auth.currentUser.uid);
+        
+        request.onsuccess = (event) => {
+            const key = event.target.result;
+            if(key) {
+                resolve(key.privateKey);
             } else {
-                console.error('Private key not found!');
-                reject(new Error('Private key not found'));
+                reject(Error('Signing Key Not Found'));
             }
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
         };
     });
 }
@@ -898,74 +1011,47 @@ async function get_private() {
 
 async function get_signature() {
     return new Promise((resolve, reject) => {
-        const indexed = window.indexedDB.open(dbName, dbVersion);
-
-        indexed.onsuccess = function(event) {
-
-            const db = event.target.result;
-            if (db.objectStoreNames.contains('signature')) {
-                var transaction = db.transaction(['signature'], 'readonly');
-                var objectStore = transaction.objectStore('signature');
-                var request = objectStore.get(auth.currentUser.uid);
-
-                request.onsuccess = function(event) {
-                    const keyData = event.target.result;
-                    if (keyData) {
-                        console.log('Signing key retrieved successfully:', keyData.privateKey);
-                        resolve(keyData.privateKey);
-                    } else {
-                        console.error('Signing key not found');
-                        reject(new Error('Signing key not found'));
-                    }
-                };
-
-                request.onerror = function(event) {
-                    console.error('Error retrieving private key');
-                    reject(event.target.error);
-                };  
+        var transaction = indexedDB.transaction(['signature'], 'readonly');
+        var objectStore = transaction.objectStore('signature');
+        var request = objectStore.get(auth.currentUser.uid);
+        
+        request.onsuccess = (event) => {
+            const key = event.target.result;
+            if(key) {
+                resolve(key.privateKey);
             } else {
-                console.error('Signing key not found!');
-                reject(new Error('Signing key not found'));
+                reject(Error('Signing Key Not Found'));
             }
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
         };
     });
 }
 
 
+async function set_signature(key) {
+    var transaction = indexedDB.transaction(['signature'], 'readwrite');
+    var objectStore = transaction.objectStore('signature');
+    var keyData = { uid: auth.currentUser.uid, privateKey: key };
+    var request = objectStore.put(keyData);
 
-
-
-// OLD FUNCTIONS
-function get_private_local() {
-    return localStorage.getItem("private");
-}
-
-function transfer_private() {
-    const indexed = window.indexedDB.open(dbName, dbVersion);
-
-    indexed.onupgradeneeded = function(event) {
-        const db = event.target.result;
-        // Check if the object store 'keys' exists
-        if (!db.objectStoreNames.contains('keys')) {
-            const objectStore = db.createObjectStore('keys', { keyPath: 'uid' });
-        }
+    request.onerror = (event) => {
+        console.error('Error storing signing key');
     };
-
-    indexed.onsuccess = function(event) {
-        var key = get_private_local()
-        const db = event.target.result;
-
-        var transaction = db.transaction(['keys'], 'readwrite');
-        var objectStore = transaction.objectStore('keys');
-        var keyData = { uid: auth.currentUser.uid, privateKey: key };
-        var request = objectStore.put(keyData);
-
-        request.onsuccess = function(event) {
-            console.log('Private key stored successfully');
-        };
-
-        request.onerror = function(event) {
-            console.error('Error storing private key');
-        };
-    }
+  
 }
+
+async function set_private(key) {
+    var transaction = indexedDB.transaction(['keys'], 'readwrite');
+    var objectStore = transaction.objectStore('keys');
+    var keyData = { uid: auth.currentUser.uid, privateKey: key };
+    var request = objectStore.put(keyData);
+
+    request.onerror = (event) => {
+        console.error('Error storing private key');
+    };
+}
+
+
