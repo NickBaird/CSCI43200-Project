@@ -214,7 +214,7 @@ async function remove_from_groups(groupId) {
     }
     groups.splice(groups.indexOf(groupId), 1);
     delete groupNames[groupId];
-    delete groupsInvalid[groupId];
+    groupsInvalid.splice(groupsInvalid.indexOf(groupId), 1)
     update_groups();
 }
 
@@ -228,9 +228,9 @@ async function send_conversation_invite(uid) {
 
 async function send_group_invite(groupId, uid) {
     if (await is_admin(groupId) && ! (await user_in_group(groupId, uid))) {
-        await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
         await database.ref("/groups/" + groupId + "/members/" + uid).set(true);
         await set_group_name_for_uid(groupId, groupNames[groupId], uid);
+        await database.ref("/invites/" + uid + "/groups/" + groupId).set(true);
     }
 }
 
@@ -284,6 +284,8 @@ async function delete_group_message(groupId, msgId) {
     var msg = (await database.ref("/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + auth.currentUser.uid + "/" + msgId).get());
     var sent = msg.child('sent').val();
     var fileId = msg.child('id').val();
+
+    console.log(msg.val());
 
     if (sent != null) {
         for (uid of Object.keys(sent)) {
@@ -911,14 +913,14 @@ function update_messages() {
         if (rcount < received_messages.length)
             if(scount < sent_messages.length)
                 if (rcount < received_messages.length && received_messages[rcount].timestamp <= sent_messages[scount].timestamp){
-                    container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3>" + deleteBtn + loaded + "\',\'" + received_messages[rcount].dbid + "\')\">Delete</button><br></div>";
+                    container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>";
                     rcount++;
                 } else {
                     container.innerHTML += "<div class=\"you\" id=\"" + sent_messages[scount].dbid + "\"><h2>You:  <h2><h3>" + sent_messages[scount].message + "</h3>" + deleteBtn + loaded + "\',\'" + sent_messages[scount].dbid + "\')\">Delete</button><br></div>";
                     scount++;
                 }
             else {
-                container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3>" + deleteBtn + loaded + "\',\'" + received_messages[rcount].dbid + "\')\">Delete</button><br></div>";
+                container.innerHTML += "<div class=\"other\" id=\"" + received_messages[rcount].dbid + "\"><h2>" + map[received_messages[rcount].uid].display + ":  <h2><h3>" + received_messages[rcount].message + "</h3><br></div>";
                 rcount++;
             }
         else {
