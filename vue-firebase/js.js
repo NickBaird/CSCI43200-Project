@@ -5,7 +5,9 @@ export {
 	new_conversation,
 	new_group,
 	accept_conversation_invite,
-	reject_conversation_invite
+	reject_conversation_invite,
+	get_conversation_invites,
+	get_group_invites
 };
 
 const firebaseConfig = {
@@ -245,7 +247,8 @@ async function initialize() {
 			// 	"</p>";
 		});
 
-	get_invites();
+	get_conversation_invites();
+	get_group_invites();
 
 	/*
     database.ref("/users/" + auth.currentUser.uid + "/public").get().then((pub) => {
@@ -699,7 +702,7 @@ async function set_group_name_for_uid(groupId, name, uid) {
 	}
 }
 
-async function get_invites() {
+async function get_conversation_invites() {
 	await database
 		.ref("/invites/" + auth.currentUser.uid + "/conversations/")
 		.on("value", (conversations) => {
@@ -709,23 +712,22 @@ async function get_invites() {
 					.ref("/users/" + conversation.key + "/display")
 					.get()
 					.then((display) => {
-						conversation_invites.push(
-							"<h3>" +
-							display.val() +
-							" is wanting to message you! </h3><br><h5>UID: " +
-							conversation.key +
-							"</h5><br><button onclick=\"accept_conversation_invite('" +
-							conversation.key +
-							"')\">Accept</button><button onclick=\"reject_conversation_invite('" +
-							conversation.key +
-							"')\">Reject</button>"
-						);
-						update_invites(); // I don't like this
+						let invite_obj = {
+							display: display.val(),
+							key: conversation.key
+						}
+						conversation_invites.push(invite_obj);
+						//update_invites(); // I don't like this
 					});
 			});
-			update_invites();
+			//update_invites();
+			console.log(conversation_invites);
 		});
 
+	return conversation_invites;
+}
+
+async function get_group_invites() {
 	await database
 		.ref("/invites/" + auth.currentUser.uid + "/groups/")
 		.on("value", (groups) => {
@@ -743,12 +745,15 @@ async function get_invites() {
 							group.key +
 							"')\">Reject</button>"
 					);
-					update_invites(); // I don't like this
+					//update_invites(); // I don't like this
 				});
 			});
-			update_invites();
+			//update_invites();
 		});
+
+	//console.log(conversation_invites);
 }
+
 
 async function new_group(name) {
 	var groupId = sodium.to_hex(
@@ -1483,9 +1488,14 @@ function update_invites() {
 	var container = document.getElementById("invites-container");
 
 	container.innerHTML = "<h3>Conversation Invites:</h3>";
+	console.log(conversation_invites.length);
 	if (conversation_invites.length > 0) {
 		conversation_invites.forEach((invite) => {
-			container.innerHTML += '<div class="invite">' + invite + "</div>";
+			console.log(invite);
+			container.innerHTML += 
+			'<div class="invite">' + invite.display + 
+			'<button onclick="accept_conversation_invite(' + invite.key + ')">Accept</button>'
+			"</div>";
 		});
 	} else {
 		container.innerHTML += "<p>None</p>";
