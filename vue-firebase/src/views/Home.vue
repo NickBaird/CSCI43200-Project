@@ -1,7 +1,7 @@
 <template>
-<main>
+<!-- <main>
     <register-login></register-login>
-</main>
+</main> -->
 </template>
 
 <script>
@@ -19,7 +19,7 @@ export default {
 </script>
 
 <style scoped>
-main {
+/* main {
     margin-top: 100px;
 }
 
@@ -43,6 +43,6 @@ h1 {
     background-color: var(--pink);
     color: white;
     font-size: 18px;
-}
+} */
 
 </style>

@@ -1,74 +1,72 @@
 <template>
-<header>
-    <h1>E2EE Messaging App</h1>
-    <nav>
-        <RouterLink to="/" class="page"><b>Main</b></RouterLink>
-    </nav>
-</header>
+<nav class="bg-[#301014] w-full h-20 p-5 flex items-center justify-between">
+
+    <vue-feather type="menu" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
+    <!-- <vue-feather type="user" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
+     -->
+    <div @click="toggleDropdown" class="relative flex items-center justify-center">
+        <vue-feather type="user" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
+        <div v-if="isDropdownVisible" class="z-20 absolute top-full bg-white  p-5 m-2 rounded-md drop-shadow-md flex flex-col items-center justify-center text-xl  gap-2 ">
+            <p class="w-full">Welcome, {{ userDisplay }}</p>
+            <p class="text-sm w-full text-nowrap">User ID {{ user.uid }}</p>
+
+               
+        </div>
+   
+    </div>
+
+    <div class="h-full flex items-center text-xl font-bold">
+        <router-link :to="{ name: 'auth' }">
+            <button type="button" class="cursor-pointer text-[#EDF4ED] bg-blue-500 rounded-md px-4 py-2">Login or Signup</button>
+        </router-link>
+    </div>
+</nav>
 </template>
 
+<script>
+import VueFeather from 'vue-feather';
+import {
+    getCurrentUser,
+    getUserDisplayInfo
+} from "../../js.js";
+
+export default {
+    // Step 2: Register it locally
+    components: {
+        VueFeather,
+    },
+    data() {
+        return {
+            user: null,
+            userDisplay: '',
+            isDropdownVisible: false,
+        };
+    },
+    methods: {
+        toggleDropdown() {
+            this.isDropdownVisible = !this.isDropdownVisible;
+        }
+    },
+    created() {
+        getCurrentUser()
+            .then(user => {
+                if (user) {
+                    this.user = user;
+                    return getUserDisplayInfo();
+                } else {
+                    throw new Error('No user signed in.');
+                }
+            })
+            .then(displayInfo => {
+                this.userDisplay = displayInfo;
+            })
+            .catch(error => {
+                console.error("Error: ", error);
+            });
+    }
+};
+</script>
+
 <style scoped>
-* {
-    font-size: 24px;
-}
 
-h1 {
-    display: flex;
-    font-size: 38px;
-    margin-top: auto;
-    margin-bottom: auto;
-    margin-left: 40px;
-    color: white;
-}
-
-.page {
-    width: auto;
-    height: 2.5em;
-    padding: 0.4em;
-    text-align: center;
-    justify-content: center;
-    background-color: var(--teal);
-    color: black;
-    opacity: 100%;
-    border-radius: 10px;
-    border-width: 2px;
-    border-color: black;
-    border-style: solid;
-    transition: 0.2s ease-in-out;
-    text-decoration: none;
-    margin: 20px;
-}
-
-.page:visited {
-    text-decoration: none;
-}
-
-.page:hover {
-    background-color: var(--yellow);
-    color: black;
-    cursor: pointer;
-}
-
-header {
-    top: 0;
-    width: 100%;
-    height: 100px;
-    position: fixed;
-    background-color: var(--pink);
-    display: flex;
-    box-shadow: 0px 6px var(--blue);
-    white-space: nowrap;
-}
-
-nav {
-    margin: auto;
-    margin-right: 40px;
-    margin-left: auto;
-    text-decoration: none;
-}
-
-.router-link-active {
-  background-color: var(--blue);
-  color: white;
-}
 </style>
