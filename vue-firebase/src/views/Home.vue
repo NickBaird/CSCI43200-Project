@@ -1,19 +1,23 @@
 <template>
-<messaging-creators></messaging-creators>
-<invites-container></invites-container>
-<chats-container></chats-container>
+<div class="h-screen w-full grid grid-cols-[.3fr_.7fr] pt-20">
+
+    <div class="w-full flex flex-col">
+        <messaging-creators></messaging-creators>
+        <chats-container></chats-container>
+    </div>
+    <div></div>
+</div>
+<!-- <invites-container></invites-container>
+ -->
 </template>
 
 <script>
 export default {
     data() {
-        return {
-        }
+        return {}
     },
-    computed: {
-    },
-    methods: {
-    },
+    computed: {},
+    methods: {},
     inheritAttrs: false
 }
 </script>
@@ -44,5 +48,4 @@ h1 {
     color: white;
     font-size: 18px;
 } */
-
 </style>

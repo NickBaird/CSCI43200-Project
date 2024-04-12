@@ -1,6 +1,6 @@
 <template>
-<div class="con">
-    <h1>Invites:</h1>
+<div class="bg-white">
+    <h1 class="text-xl">Invites:</h1>
     <button @click="loadData()">Click to load invite data</button>
     <button @click="seeData(responseData)">Click to see data</button>
     <div v-if="dataLoaded">
