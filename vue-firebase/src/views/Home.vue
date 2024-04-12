@@ -1,7 +1,7 @@
 <template>
-<!-- <main>
-    <register-login></register-login>
-</main> -->
+<messaging-creators></messaging-creators>
+<invites-container></invites-container>
+<chats-container></chats-container>
 </template>
 
 <script>

@@ -1,4 +1,13 @@
-export { register2, login2 };
+export { 
+	register2, 
+	login2,
+	send_group_invite,
+	new_conversation,
+	new_group,
+	accept_conversation_invite,
+	reject_conversation_invite
+};
+
 const firebaseConfig = {
 	apiKey: "AIzaSyCvGGb0NWirKcKX9P_krRogy5BdN1XUxww",
 	authDomain: "e2ee-messengers.firebaseapp.com",
@@ -8,11 +17,11 @@ const firebaseConfig = {
 	appId: "1:979623333154:web:91a56de139f27fb365297b",
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+const firebaseApp = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-var public_ = null;
+var public_key = null;
 var publicSignature = null;
 var display = null;
 var map = {};
@@ -84,7 +93,7 @@ function register() {
 
 			var userData = {
 				display: display.value,
-				public_: sodium.to_hex(keys.publicKey),
+				public: sodium.to_hex(keys.publicKey),
 				signature: sodium.to_hex(signing.publicKey),
 			};
 			database.ref("/users/" + auth.currentUser.uid).set(userData);
@@ -105,7 +114,7 @@ function register2(email, password, display) {
 
 				var userData = {
 					display: display,
-					public_: sodium.to_hex(keys.publicKey),
+					public: sodium.to_hex(keys.publicKey),
 					signature: sodium.to_hex(signing.publicKey),
 				};
 				database.ref("/users/" + user.uid).set(userData);
@@ -212,9 +221,12 @@ async function change_display_name(name) {
 async function initialize() {
 	console.log("INIT");
 
-	public_ = (
-		await database.ref("/users/" + auth.currentUser.uid + "/public").get()
+	public_key = (
+		await database
+			.ref("/users/" + auth.currentUser.uid + "/public")
+			.get()
 	).val();
+	console.log(public_key);
 	publicSignature = (
 		await database
 			.ref("/users/" + auth.currentUser.uid + "/signature")
@@ -225,12 +237,12 @@ async function initialize() {
 		.ref("/users/" + auth.currentUser.uid + "/display")
 		.on("value", (value) => {
 			display = value.val();
-			document.getElementById("user-container").innerHTML =
-				"<h1>Welcome " +
-				display +
-				"!</h1> <br><p>User ID: " +
-				auth.currentUser.uid +
-				"</p>";
+			// document.getElementById("user-container").innerHTML =
+			// 	"<h1>Welcome " +
+			// 	display +
+			// 	"!</h1> <br><p>User ID: " +
+			// 	auth.currentUser.uid +
+			// 	"</p>";
 		});
 
 	get_invites();
@@ -248,7 +260,7 @@ async function initialize() {
         });
     });*/
 
-	conversationsRef = database.ref(
+	let conversationsRef = database.ref(
 		"/users/" + auth.currentUser.uid + "/conversations"
 	);
 	conversationsRef.on("child_added", (conversation) => {
@@ -259,7 +271,7 @@ async function initialize() {
 		remove_from_conversations(conversation.key);
 	});
 
-	groupsRef = database.ref("/users/" + auth.currentUser.uid + "/groups");
+	let groupsRef = database.ref("/users/" + auth.currentUser.uid + "/groups");
 	groupsRef.on("child_added", (group) => {
 		add_to_groups(group.key);
 	});
@@ -313,12 +325,12 @@ async function add_to_map(uid) {
 		).val();
 		const privateKey = await get_private();
 		const clientkeys = sodium.crypto_kx_client_session_keys(
-			sodium.from_hex(public_),
+			sodium.from_hex(public_key),
 			sodium.from_hex(privateKey),
 			sodium.from_hex(otherPublic)
 		);
 		const serverkeys = sodium.crypto_kx_server_session_keys(
-			sodium.from_hex(public_),
+			sodium.from_hex(public_key),
 			sodium.from_hex(privateKey),
 			sodium.from_hex(otherPublic)
 		);
@@ -699,14 +711,14 @@ async function get_invites() {
 					.then((display) => {
 						conversation_invites.push(
 							"<h3>" +
-								display.val() +
-								" is wanting to message you! </h3><br><h5>UID: " +
-								conversation.key +
-								"</h5><br><button onclick=\"accept_conversation_invite('" +
-								conversation.key +
-								"')\">Accept</button><button onclick=\"reject_conversation_invite('" +
-								conversation.key +
-								"')\">Reject</button>"
+							display.val() +
+							" is wanting to message you! </h3><br><h5>UID: " +
+							conversation.key +
+							"</h5><br><button onclick=\"accept_conversation_invite('" +
+							conversation.key +
+							"')\">Accept</button><button onclick=\"reject_conversation_invite('" +
+							conversation.key +
+							"')\">Reject</button>"
 						);
 						update_invites(); // I don't like this
 					});
@@ -939,7 +951,7 @@ async function send_group_file(groupId, file) {
 
 async function get_received_messages(uid) {
 	received_messages = [];
-	ref = database.ref("/messages/" + auth.currentUser.uid + "/" + uid);
+	let ref = database.ref("/messages/" + auth.currentUser.uid + "/" + uid);
 	refs.push(ref);
 	ref.on("child_added", (message) => {
 		var nonce = sodium.from_hex(message.child("nonce").val());
@@ -1015,7 +1027,7 @@ async function get_received_messages(uid) {
 
 async function get_sent_messages(uid) {
 	sent_messages = [];
-	ref = database.ref("/messages/" + uid + "/" + auth.currentUser.uid);
+	let ref = database.ref("/messages/" + uid + "/" + auth.currentUser.uid);
 	refs.push(ref);
 	ref.on("child_added", (message) => {
 		var nonce = sodium.from_hex(message.child("nonce").val());
@@ -1213,7 +1225,7 @@ async function get_group_file_from_id(
 
 async function get_sent_group_messages(groupId) {
 	sent_messages = [];
-	ref = database.ref(
+	let ref = database.ref(
 		"/group_messages/" +
 			groupId +
 			"/" +
@@ -1493,8 +1505,8 @@ async function sign_message(message) {
 	return sodium.crypto_sign(message, sodium.from_hex(await get_signature()));
 }
 
-function verify_message(message, public_) {
-	return sodium.crypto_sign_open(message, sodium.from_hex(public_));
+function verify_message(message, public_key) {
+	return sodium.crypto_sign_open(message, sodium.from_hex(public_key));
 }
 
 async function get_private() {

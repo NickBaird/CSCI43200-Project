@@ -75,30 +75,29 @@
 </template>
 
 <script>
-	import { login2 } from '../../js.js';
+import { login2 } from '../../js.js';
 
-	export default {
-	    data() {
-	        return {
-
-	            loginEmail: '',
-	            loginPassword: ''
-	        }
-	    },
-	    props: {},
-	    methods: {
-	        LoginVue() {
-	            login2(this.loginEmail, this.loginPassword)
-	            .then((userCredential) => {
-	                // Handle success, redirect to another route/page
-	                this.$router.push({ name: 'home' }); // Redirect to 'Dashboard' page
-	            })
-	            .catch((error) => {
-	                // Handle failure, possibly by updating UI with the error message
-	                console.error(error.message);
-	                // Update the UI here to inform the user about the error
-	            });
-	        },
-	    }
-	}
+export default {
+    data() {
+        return {
+            loginEmail: '',
+            loginPassword: ''
+        }
+    },
+    props: {},
+    methods: {
+        LoginVue() {
+            login2(this.loginEmail, this.loginPassword)
+            .then((userCredential) => {
+                // Handle success, redirect to another route/page
+                this.$router.push({ name: 'home' }); // Redirect to 'Dashboard' page
+            })
+            .catch((error) => {
+                // Handle failure, possibly by updating UI with the error message
+                console.error(error.message);
+                // Update the UI here to inform the user about the error
+            });
+        },
+    }
+}
 </script>
