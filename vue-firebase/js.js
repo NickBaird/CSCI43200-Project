@@ -7,7 +7,9 @@ export {
 	accept_conversation_invite,
 	reject_conversation_invite,
 	get_conversation_invites,
-	get_group_invites
+	get_group_invites,
+	database,
+	auth
 };
 
 const firebaseConfig = {
@@ -202,6 +204,7 @@ function login() {
 		}
 	);
 }
+
 function login2(email, password) {
 	return new Promise((resolve, reject) => {
 		auth.signInWithEmailAndPassword(email, password)
