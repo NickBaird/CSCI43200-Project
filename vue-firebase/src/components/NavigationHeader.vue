@@ -1,5 +1,5 @@
 <template>
-	<nav class="bg-[#301014] w-full h-20 p-5 flex items-center justify-between top-0 fixed">
+	<nav class="bg-[#301014] w-full h-20 p-5 flex items-center justify-between top-0 fixed z-20">
 		<vue-feather
 			type="menu"
 			class="h-full cursor-pointer text-[#EDF4ED]"

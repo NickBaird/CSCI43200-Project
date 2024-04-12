@@ -1,11 +1,11 @@
 <template>
-<div class="h-screen w-full grid grid-cols-[.3fr_.7fr] pt-20">
+<div class="h-screen grid grid-cols-[.3fr_.7fr] pt-20">
 
     <div class="w-full flex flex-col">
-        <messaging-creators></messaging-creators>
+        <!-- <messaging-creators></messaging-creators> -->
         <chats-container></chats-container>
     </div>
-    <div></div>
+    <div class="bg-[#f8e9e5]"></div>
 </div>
 <!-- <invites-container></invites-container>
  -->
