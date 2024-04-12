@@ -29,11 +29,6 @@ export default {
     },
     props: ['display', 'convKey'],
     computed: {
-        updateInvites() {
-            if (this.invites.size != 0) {
-                return this.invites[0];
-            }
-        }
     }
 }
 </script>

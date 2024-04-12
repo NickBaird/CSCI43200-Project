@@ -9,7 +9,9 @@ export {
 	get_conversation_invites,
 	get_group_invites,
 	database,
-	auth
+	auth,
+	update_conversations,
+	load_conversation
 };
 
 const firebaseConfig = {
@@ -973,7 +975,7 @@ async function get_received_messages(uid) {
 		);
 
 		if (type == null) {
-			output = {
+			var output = {
 				dbid: message.key,
 				message: sodium.to_string(
 					verify_message(decrypted, map[uid].signature)
@@ -1449,18 +1451,25 @@ function update_messages() {
 }
 
 function update_conversations() {
-	var container = document.getElementById("conversations-container");
-	container.innerHTML = "";
+	// var container = document.getElementById("conversations-container");
+	// container.innerHTML = "";
+	let conversations_array = [];
 	conversations.forEach((uid) => {
-		container.innerHTML +=
-			'<div class="conversation" onclick="load_conversation(\'' +
-			uid +
-			"')\"><h3>" +
-			map[uid].display +
-			"</h3><br>" +
-			uid +
-			"</div> <br>";
+		let conv_data = {
+			uid: uid,
+			display: map[uid].display
+		}
+		conversations_array.push(conv_data);
+		// container.innerHTML +=
+		// 	'<div class="conversation" onclick="load_conversation(\'' +
+		// 	uid +
+		// 	"')\"><h3>" +
+		// 	map[uid].display +
+		// 	"</h3><br>" +
+		// 	uid +
+		// 	"</div> <br>";
 	});
+	return conversations_array;
 }
 
 function update_groups() {
