@@ -1,18 +1,24 @@
 <template>
 <messaging-creators></messaging-creators>
 <invites-container></invites-container>
-<conversations-container></conversations-container>
+<conversations-container
+@load-conversation="loadConversation"></conversations-container>
+<chat-container
+:conversation-load="conversation"></chat-container>
 </template>
 
 <script>
 export default {
     data() {
         return {
+            conversation: []
         }
     },
-    computed: {
-    },
     methods: {
+        loadConversation(conversationData) {
+            this.conversation = conversationData;
+            console.log(conversationData);
+        }
     },
     inheritAttrs: false
 }

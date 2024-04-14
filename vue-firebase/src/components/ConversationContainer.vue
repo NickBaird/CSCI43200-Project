@@ -3,12 +3,12 @@
     <p>{{ display }}</p>
     <p>{{ " [" + uid + "]"}}</p>
     <button @click="loadData(uid)">Load</button>
-    <button @click="seeData(responseData)">See</button>
-    <div v-if="dataLoaded">
+    <button @click="seeData(responseData, uid)">See</button>
+    <!-- <div v-if="dataLoaded">
         <div v-for="message in messages">
             <p>{{ message.message }}</p>
         </div>
-    </div>
+    </div> -->
 </div>
 </template>
 
@@ -27,11 +27,12 @@ export default {
     },
     methods: {
         async loadData(uid) {
-            console.log(uid);
+            //console.log(uid);
             try {
                 this.responseData = await load_conversation(uid);
                 //let arr = [...this.responseData[0], ...this.responseData[1]]
                 //console.log(this.responseData);
+                //this.$emit('load-conversation', this.responseData);
             } catch (e) {
                 console.log(e);
             }
@@ -39,13 +40,19 @@ export default {
             //     console.log(response);
             //     return response});
         },
-        seeData(data) {
+        seeData(data, uid) {
             this.dataLoaded = true;
             this.sentMessages = data.sent;
+            this.sentMessages.forEach(obj => {
+                obj.me = "yes";
+            });
             this.receivedMessages = data.received;
+            this.receivedMessages.forEach(obj => {
+                obj.me = uid;
+            });
             this.messages = this.sentMessages.concat(this.receivedMessages);
             this.messages.sort((a, b) => a.timestamp - b.timestamp);
-            console.log(this.messages);
+            this.$emit('load-conversation', this.messages);
         }
     },
     props: ['display', 'uid'],

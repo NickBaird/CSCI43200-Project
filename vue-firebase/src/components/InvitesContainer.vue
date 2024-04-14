@@ -53,7 +53,7 @@ export default {
                             conversation_invites.push(invite_obj);
                         });
 			    });
-			console.log(conversation_invites);
+			//console.log(conversation_invites);
             this.invites = conversation_invites;
             this.dataLoaded = true;
 		});
@@ -63,7 +63,7 @@ export default {
         async loadData() {
             try {
                 this.responseData = await get_conversation_invites();
-                console.log(this.responseData);
+                //console.log(this.responseData);
             } catch (e) {
                 console.log(e);
             }
@@ -84,7 +84,7 @@ export default {
     },
     watch: {
         invites(newValue, oldValue) {
-            console.log(`Value changed from ${oldValue} to ${newValue}`);
+            //console.log(`Value changed from ${oldValue} to ${newValue}`);
         }
     }
 }

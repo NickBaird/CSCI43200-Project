@@ -7,7 +7,8 @@
         <div v-for="conversation in conversations">
             <conversation-container
             :display="conversation.display"
-            :uid="conversation.uid"></conversation-container>
+            :uid="conversation.uid"
+            @load-conversation="loadConversation"></conversation-container>
         </div>
         <div v-if="responseData.length == 0">No conversations</div>
     </div>
@@ -38,7 +39,7 @@ export default {
         async loadData() {
             try {
                 this.responseData = await update_conversations();
-                console.log(this.responseData);
+                //console.log(this.responseData);
             } catch (e) {
                 console.log(e);
             }
@@ -49,6 +50,9 @@ export default {
         seeData(data) {
             this.dataLoaded = true;
             this.conversations = data;
+        },
+        loadConversation(conversationData) {
+            this.$emit('load-conversation', conversationData);
         }
     }
 }

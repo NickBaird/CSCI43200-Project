@@ -12,7 +12,8 @@ export {
 	auth,
 	update_conversations,
 	load_conversation,
-	update_messages
+	update_messages,
+	public_key
 };
 
 const firebaseConfig = {
@@ -727,7 +728,7 @@ async function get_conversation_invites() {
 					});
 			});
 			//update_invites();
-			console.log(conversation_invites);
+			//console.log(conversation_invites);
 		});
 
 	return conversation_invites;
@@ -1478,7 +1479,7 @@ function update_messages() {
 			} else break;
 		}
 	}
-	console.log(messages_array);
+	//console.log(messages_array);
 	return messages_array;
 }
 
