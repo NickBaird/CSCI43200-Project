@@ -1,7 +1,7 @@
 <template>
 <messaging-creators></messaging-creators>
 <invites-container></invites-container>
-<chats-container></chats-container>
+<conversations-container></conversations-container>
 </template>
 
 <script>

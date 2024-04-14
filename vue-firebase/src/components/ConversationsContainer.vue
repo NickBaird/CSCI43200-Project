@@ -5,9 +5,9 @@
     <button @click="seeData(responseData)">Click to see data</button>
     <div v-if="dataLoaded">
         <div v-for="conversation in conversations">
-            <chat-container
+            <conversation-container
             :display="conversation.display"
-            :uid="conversation.uid"></chat-container>
+            :uid="conversation.uid"></conversation-container>
         </div>
         <div v-if="responseData.length == 0">No conversations</div>
     </div>
@@ -21,11 +21,11 @@
 import { 
     update_conversations
 } from '../../js.js';
-import ChatContainer from './ChatContainer.vue';
+import ConversationContainer from './ConversationContainer.vue';
 
 export default {
     components: {
-        ChatContainer
+        ConversationContainer
     },
     data() {
         return {
@@ -49,11 +49,6 @@ export default {
         seeData(data) {
             this.dataLoaded = true;
             this.conversations = data;
-        }
-    },
-    watch: {
-        invites(newValue, oldValue) {
-            console.log(`Value changed from ${oldValue} to ${newValue}`);
         }
     }
 }

@@ -11,7 +11,8 @@ export {
 	database,
 	auth,
 	update_conversations,
-	load_conversation
+	load_conversation,
+	update_messages
 };
 
 const firebaseConfig = {
@@ -1021,7 +1022,7 @@ async function get_received_messages(uid) {
 		}
 
 		received_messages.push(output);
-		update_messages();
+		//update_messages();
 	});
 
 	ref.on("child_removed", (message) => {
@@ -1097,7 +1098,7 @@ async function get_sent_messages(uid) {
 		}
 
 		sent_messages.push(output);
-		update_messages();
+		//update_messages();
 	});
 
 	ref.on("child_removed", (message) => {
@@ -1305,6 +1306,9 @@ async function load_conversation(uid) {
 	otherdisplay = map[uid].display;
 	await get_received_messages(uid);
 	await get_sent_messages(uid);
+	return {
+		sent: sent_messages,
+		received: received_messages};
 
 	var container = document.getElementById("message-container");
 	container.innerHTML =
@@ -1374,8 +1378,8 @@ function unload() {
 }
 
 function update_messages() {
-	var container = document.getElementById("messages-container");
-	container.innerHTML = "";
+	// var container = document.getElementById("messages-container");
+	// container.innerHTML = "";
 	var rcount = 0,
 		scount = 0;
 
@@ -1389,6 +1393,8 @@ function update_messages() {
 		deleteBtn = "<button onclick=\"delete_conversation_message('";
 	}
 
+	let messages_array = [];
+
 	while (true) {
 		if (rcount < received_messages.length)
 			if (scount < sent_messages.length)
@@ -1397,57 +1403,83 @@ function update_messages() {
 					received_messages[rcount].timestamp <=
 						sent_messages[scount].timestamp
 				) {
-					container.innerHTML +=
-						'<div class="other" id="' +
-						received_messages[rcount].dbid +
-						'"><h2>' +
-						map[received_messages[rcount].uid].display +
-						":  <h2><h3>" +
-						received_messages[rcount].message +
-						"</h3><br></div>";
+					let message_object = {
+						id: received_messages[rcount].dbid,
+						display: map[received_messages[rcount].uid].display,
+						message: received_messages[rcount].message
+					}
+					messages_array.push(message_object);
+					// container.innerHTML +=
+					// 	'<div class="other" id="' +
+					// 	received_messages[rcount].dbid +
+					// 	'"><h2>' +
+					// 	map[received_messages[rcount].uid].display +
+					// 	":  <h2><h3>" +
+					// 	received_messages[rcount].message +
+					// 	"</h3><br></div>";
 					rcount++;
 				} else {
-					container.innerHTML +=
-						'<div class="you" id="' +
-						sent_messages[scount].dbid +
-						'"><h2>You:  <h2><h3>' +
-						sent_messages[scount].message +
-						"</h3>" +
-						deleteBtn +
-						loaded +
-						"','" +
-						sent_messages[scount].dbid +
-						"')\">Delete</button><br></div>";
+					let message_object = {
+						id: received_messages[scount].dbid,
+						display: map[received_messages[scount].uid].display,
+						message: received_messages[scount].message
+					}
+					messages_array.push(message_object);
+					// container.innerHTML +=
+					// 	'<div class="you" id="' +
+					// 	sent_messages[scount].dbid +
+					// 	'"><h2>You:  <h2><h3>' +
+					// 	sent_messages[scount].message +
+					// 	"</h3>" +
+					// 	deleteBtn +
+					// 	loaded +
+					// 	"','" +
+					// 	sent_messages[scount].dbid +
+					// 	"')\">Delete</button><br></div>";
 					scount++;
 				}
 			else {
-				container.innerHTML +=
-					'<div class="other" id="' +
-					received_messages[rcount].dbid +
-					'"><h2>' +
-					map[received_messages[rcount].uid].display +
-					":  <h2><h3>" +
-					received_messages[rcount].message +
-					"</h3><br></div>";
+				let message_object = {
+					id: received_messages[rcount].dbid,
+					display: map[received_messages[rcount].uid].display,
+					message: received_messages[rcount].message
+				}
+				messages_array.push(message_object);
+				// container.innerHTML +=
+				// 	'<div class="other" id="' +
+				// 	received_messages[rcount].dbid +
+				// 	'"><h2>' +
+				// 	map[received_messages[rcount].uid].display +
+				// 	":  <h2><h3>" +
+				// 	received_messages[rcount].message +
+				// 	"</h3><br></div>";
 				rcount++;
 			}
 		else {
 			if (scount < sent_messages.length) {
-				container.innerHTML +=
-					'<div class="you" id="' +
-					sent_messages[scount].dbid +
-					'"><h2>You:  <h2><h3>' +
-					sent_messages[scount].message +
-					"</h3>" +
-					deleteBtn +
-					loaded +
-					"','" +
-					sent_messages[scount].dbid +
-					"')\">Delete</button><br></div>";
+				let message_object = {
+					id: received_messages[scount].dbid,
+					display: map[received_messages[scount].uid].display,
+					message: received_messages[scount].message
+				}
+				messages_array.push(message_object);
+				// container.innerHTML +=
+				// 	'<div class="you" id="' +
+				// 	sent_messages[scount].dbid +
+				// 	'"><h2>You:  <h2><h3>' +
+				// 	sent_messages[scount].message +
+				// 	"</h3>" +
+				// 	deleteBtn +
+				// 	loaded +
+				// 	"','" +
+				// 	sent_messages[scount].dbid +
+				// 	"')\">Delete</button><br></div>";
 				scount++;
 			} else break;
 		}
 	}
+	console.log(messages_array);
+	return messages_array;
 }
 
 function update_conversations() {
