@@ -13,7 +13,8 @@ export {
 	update_conversations,
 	load_conversation,
 	update_messages,
-	public_key
+	public_key,
+	send_message
 };
 
 const firebaseConfig = {
@@ -1311,14 +1312,14 @@ async function load_conversation(uid) {
 		sent: sent_messages,
 		received: received_messages};
 
-	var container = document.getElementById("message-container");
-	container.innerHTML =
-		'<input type="text" id="message-box"><button onclick="send_message(\'' +
-		uid +
-		"', " +
-		"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file('" +
-		uid +
-		"', document.getElementById('file-upload').files[0]);\">Send File</button>";
+	// var container = document.getElementById("message-container");
+	// container.innerHTML =
+	// 	'<input type="text" id="message-box"><button onclick="send_message(\'' +
+	// 	uid +
+	// 	"', " +
+	// 	"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file('" +
+	// 	uid +
+	// 	"', document.getElementById('file-upload').files[0]);\">Send File</button>";
 }
 
 function unload_conversation() {
@@ -1330,7 +1331,7 @@ function unload_conversation() {
 		received_messages = [];
 		sent_messages = [];
 		update_messages();
-		document.getElementById("message-container").innerHTML = "";
+		//document.getElementById("message-container").innerHTML = "";
 	}
 }
 
@@ -1359,7 +1360,7 @@ function unload_group() {
 		received_messages = [];
 		sent_messages = [];
 		update_messages();
-		document.getElementById("message-container").innerHTML = "";
+		//document.getElementById("message-container").innerHTML = "";
 	}
 }
 

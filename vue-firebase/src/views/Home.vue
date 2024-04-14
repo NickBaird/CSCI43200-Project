@@ -2,22 +2,38 @@
 <messaging-creators></messaging-creators>
 <invites-container></invites-container>
 <conversations-container
-@load-conversation="loadConversation"></conversations-container>
+@load-conversation="loadConversation"
+@loaded-messages="loadedMessages"></conversations-container>
 <chat-container
-:conversation-load="conversation"></chat-container>
+:conversationLoad="conversation"
+:update="updateMessages"></chat-container>
+<message-sender
+:otherUID="otherUID"
+@update-messages="updateMessages"></message-sender>
 </template>
 
 <script>
 export default {
     data() {
         return {
-            conversation: []
+            conversation: [],
+            messages: [],
+            otherUID: '',
+            updatedMessages: []
         }
     },
     methods: {
-        loadConversation(conversationData) {
+        loadConversation(conversationData, uid) {
             this.conversation = conversationData;
-            console.log(conversationData);
+            this.otherUID = uid;
+            //console.log(conversationData);
+        },
+        loadedMessages(loaded) {
+            this.messages = loaded;
+        },
+        updateMessages(update) {
+            this.conversation = update;
+            console.log(update);
         }
     },
     inheritAttrs: false

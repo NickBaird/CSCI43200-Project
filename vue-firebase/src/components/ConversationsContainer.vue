@@ -8,11 +8,11 @@
             <conversation-container
             :display="conversation.display"
             :uid="conversation.uid"
+            :loadedMessages="this.loadedMessages"
             @load-conversation="loadConversation"></conversation-container>
         </div>
         <div v-if="responseData.length == 0">No conversations</div>
     </div>
-    <div id="conversations-container"></div>
     <h1>Groups:</h1>
     <div id="groups-container"></div>
 </div>
@@ -20,7 +20,8 @@
 
 <script>
 import { 
-    update_conversations
+    update_conversations,
+    load_conversation
 } from '../../js.js';
 import ConversationContainer from './ConversationContainer.vue';
 
@@ -32,14 +33,14 @@ export default {
         return {
             conversations: [],
             dataLoaded: false,
-            responseData: []
+            responseData: [],
+            loadedMessages: []
         }
     },
     methods: {
         async loadData() {
             try {
                 this.responseData = await update_conversations();
-                //console.log(this.responseData);
             } catch (e) {
                 console.log(e);
             }
@@ -47,12 +48,25 @@ export default {
             //     console.log(response);
             //     return response});
         },
+        async loadMessages(data) {
+            for (let i = 0; i < data.length; i++) {
+                const result = await load_conversation(data[i].uid);
+                //console.log(result);
+            }
+        },
         seeData(data) {
             this.dataLoaded = true;
             this.conversations = data;
+            // for (let i = 0; i < data.length; i++) {
+            //     let result = load_conversation(data[i].uid);
+            //     result.uid = data[i].uid;
+            //     this.loadedMessages.push(result);
+            // }
+            // console.log(this.loadedMessages);
+            // this.$emit('loaded-messages', this.loadedMessages);
         },
-        loadConversation(conversationData) {
-            this.$emit('load-conversation', conversationData);
+        loadConversation(conversationData, uid) {
+            this.$emit('load-conversation', conversationData, uid);
         }
     }
 }

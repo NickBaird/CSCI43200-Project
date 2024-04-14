@@ -9,6 +9,8 @@
 	padding: 20px;
 	background-color: #bdc3c7;
 	border-radius: 15px;
+	max-height: 900px;
+	overflow-y: auto; 
 }
 
 p {

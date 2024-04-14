@@ -22,11 +22,10 @@ export default {
         }
     },
     methods: {
-        sortMessages(conversationLoad) {
-
-        }
     },
-    props: ['conversationLoad'],
+    computed: {
+    },
+    props: ['conversationLoad', 'update'],
 }
 </script>
 

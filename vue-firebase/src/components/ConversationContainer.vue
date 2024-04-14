@@ -42,6 +42,14 @@ export default {
         },
         seeData(data, uid) {
             this.dataLoaded = true;
+
+            // let messagesArr = null;
+            // for (let i = 0; i < this.messagesObject.length; i++) {
+            //     if (this.messagesObject[i].uid == this.thisUID) {
+            //         messagesArr = this.messagesObject[i]
+            //     }
+            // }
+
             this.sentMessages = data.sent;
             this.sentMessages.forEach(obj => {
                 obj.me = "yes";
@@ -52,9 +60,9 @@ export default {
             });
             this.messages = this.sentMessages.concat(this.receivedMessages);
             this.messages.sort((a, b) => a.timestamp - b.timestamp);
-            this.$emit('load-conversation', this.messages);
+            this.$emit('load-conversation', this.messages, uid);
         }
     },
-    props: ['display', 'uid'],
+    props: ['display', 'uid', 'loadedMessages'],
 }
 </script>
