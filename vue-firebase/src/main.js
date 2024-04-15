@@ -7,7 +7,7 @@ import Register from "./components/Register.vue";
 import Login from "./components/Login.vue";
 import MessagingCreators from "./components/MessagingCreators.vue";
 import InvitesContainer from "./components/InvitesContainer.vue";
-import ChatsContainer from "./components/ChatsContainer.vue";
+import ConversationsContainer from "./components/ConversationsContainer.vue";
 
 const appVue = createApp(App);
 
@@ -16,7 +16,7 @@ appVue.component("register", Register);
 appVue.component("login", Login);
 appVue.component("messaging-creators", MessagingCreators);
 appVue.component("invites-container", InvitesContainer);
-appVue.component("chats-container", ChatsContainer);
+appVue.component("conversations-container", ConversationsContainer);
 
 appVue.use(router);
 appVue.mount("#app");

@@ -1,15 +1,15 @@
 <template>
-<div class="bg-white">
+  <div class="bg-white">
     <button @click="close" class="self-start p-4 ">
-        <vue-feather type="x-square" class="text-red-500"></vue-feather>
+      <vue-feather type="x-square" class="text-red-500"></vue-feather>
     </button>
     <div class="flex flex-col lg:flex-row">
-        <new-conversation />
-        <new-group/>
-        <group-invite/>
+      <new-conversation />
+      <new-group/>
+      <group-invite/>
     </div>
 
-</div>
+  </div>
 </template>
 
 <script>
@@ -20,19 +20,19 @@ import GroupInvite from './MessagingCreators/GroupInvite.vue';
 import { new_conversation } from '../../js';
 
 export default {
-    components: {
-        NewConversation,
-        VueFeather,
-        NewGroup,
-        GroupInvite
-    },
-    data() {
-        return {}
-    },
-    methods: {
-        close() {
-            this.$emit('close');
-        }
+  components: {
+    NewConversation,
+    VueFeather,
+    NewGroup,
+    GroupInvite
+  },
+  data() {
+    return {}
+  },
+  methods: {
+    close() {
+      this.$emit('close');
     }
+  }
 }
 </script>

@@ -1,105 +1,121 @@
 <template>
-<nav class="bg-[#301014] w-full h-20 px-10 py-5 flex items-center justify-between top-0 fixed z-20">
+  <nav class="bg-[#301014] w-full h-20 px-10 py-5 flex items-center justify-between top-0 fixed z-20">
     <!-- Conditional rendering for menu/back icon -->
     <router-link :to="{ name: 'home' }" v-if="$route.name === 'auth'">
-        <vue-feather type="arrow-left" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
+      <vue-feather type="arrow-left" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
     </router-link>
     <!-- <vue-feather type="menu" class="h-full cursor-pointer text-[#EDF4ED]" v-else></vue-feather> -->
 
     <!-- Conditional rendering for user icon -->
     <div @click="toggleProfile" class="flex items-center justify-center" v-if="$route.name !== 'auth'">
-        <vue-feather type="user" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
+      <vue-feather type="user" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>
     </div>
 
     <div v-if="isDropdownVisible" class="z-20 absolute p-5 left-0 rounded-md drop-shadow-md text-xl gap-2 flex items-center justify-center">
-        <div class="flex flex-col items-start justify-start bg-white  translate-y-20 rounded-md px-5 pb-5 pt-2">
-            <button @click="toggleProfile" class="">
-                <vue-feather type="chevron-up" class=""></vue-feather>
-            </button>
-            <p class="">Welcome, {{ userDisplay }}</p>
-            <p class="text-sm  cursor-pointer hover:bg-gray-100 px-2 py-1 rounded-md transition-all" @click="copyToClipboard(user.uid)" ref="userIdText">
-                User ID <span class="font-semibold text-gray-800 hover:text-blue-500">{{ user.uid }}</span>
-            </p>
-            <transition name="fade" class="self-center">
-                <p v-if="copySuccess" class="text-green-500 text-xs">Copied!</p>
-            </transition>
-        </div>
+      <div class="flex flex-col items-start justify-start bg-white  translate-y-20 rounded-md px-5 pb-5 pt-2">
+        <button @click="toggleProfile" class="">
+          <vue-feather type="chevron-up" class=""></vue-feather>
+        </button>
+        <p class="">Welcome, {{ userDisplay }}</p>
+        <p class="text-sm  cursor-pointer hover:bg-gray-100 px-2 py-1 rounded-md transition-all" @click="copyToClipboard(user.uid)" ref="userIdText">
+          User ID <span class="font-semibold text-gray-800 hover:text-blue-500">{{ user.uid }}</span>
+        </p>
+        <transition name="fade" class="self-center">
+          <p v-if="copySuccess" class="text-green-500 text-xs">Copied!</p>
+        </transition>
+      </div>
     </div>
+    <div class="relative flex justify-end" v-if="$route.name !== 'auth' && user">
+      <vue-feather type="bell" class="text-white cursor-pointer " @click="toggleNotification"></vue-feather>
+      <div v-if="isNotifDropdownVisible" class="z-20 absolute pt-2 px-5 pb-5 rounded-md drop-shadow-md text-xl gap-2 flex flex-col items-end justify-end bg-white w-fit translate-y-6">
+        <button @click="toggleNotification" class="">
+          <vue-feather type="chevron-up" class=""></vue-feather>
+        </button>
+        <invites-container></invites-container>
 
+      </div>
+    </div>
     <!-- Conditional rendering for login/signup button -->
     <div class="h-full flex items-center text-xl font-bold" v-if="$route.name !== 'auth' && !user">
-        <router-link :to="{ name: 'auth' }">
-            <button type="button" class="cursor-pointer text-[#EDF4ED] bg-blue-500 rounded-md px-4 py-2">Login or Signup</button>
-        </router-link>
+      <router-link :to="{ name: 'auth' }">
+        <button type="button" class="cursor-pointer text-[#EDF4ED] bg-blue-500 rounded-md px-4 py-2">Login or Signup</button>
+      </router-link>
     </div>
-</nav>
+  </nav>
 </template>
 
 <script>
 import VueFeather from 'vue-feather';
 import {
-    getCurrentUser,
-    getUserDisplayInfo
+  getCurrentUser,
+  getUserDisplayInfo
 } from "../../js.js";
+import InvitesContainer from "./InvitesContainer.vue";
+
 
 export default {
-    components: {
-        VueFeather,
+  components: {
+    VueFeather,
+    InvitesContainer
+  },
+  data() {
+    return {
+      user: null,
+      userDisplay: '',
+      isDropdownVisible: false,
+      copySuccess: false,
+      isNotifDropdownVisible: false
+    };
+  },
+  methods: {
+    toggleProfile() {
+      this.isDropdownVisible = !this.isDropdownVisible;
     },
-    data() {
-        return {
-            user: null,
-            userDisplay: '',
-            isDropdownVisible: false,
-            copySuccess: false,
-        };
+    toggleNotification() {
+      this.isNotifDropdownVisible = !this.isNotifDropdownVisible;
     },
-    methods: {
-        toggleProfile() {
-            this.isDropdownVisible = !this.isDropdownVisible;
-        },
-        copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                this.copySuccess = true;
-                setTimeout(() => {
-                    this.copySuccess = false;
-                }, 2000); // Message disappears after 2 seconds
-            }, (err) => {
-                console.error('Failed to copy: ', err);
-            });
-        }
-    },
-    created() {
-        getCurrentUser()
-            .then(user => {
-                if (user) {
-                    this.user = user;
-                    return getUserDisplayInfo();
-                } else {
-                    throw new Error('No user signed in.');
-                }
-            })
-            .then(displayInfo => {
-                this.userDisplay = displayInfo;
-            })
-            .catch(error => {
-                console.error("Error: ", error);
-            });
+    copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.copySuccess = true;
+        setTimeout(() => {
+          this.copySuccess = false;
+        }, 2000); // Message disappears after 2 seconds
+      }, (err) => {
+        console.error('Failed to copy: ', err);
+      });
     }
+  },
+  created() {
+    getCurrentUser()
+        .then(user => {
+          if (user) {
+            this.user = user;
+            return getUserDisplayInfo();
+          } else {
+            throw new Error('No user signed in.');
+          }
+        })
+        .then(displayInfo => {
+          this.userDisplay = displayInfo;
+        })
+        .catch(error => {
+          console.error("Error: ", error);
+        });
+  }
 };
 </script>
 
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity 0.5s;
+  transition: opacity 0.5s;
 }
 
 .fade-enter,
 .fade-leave-to
 
-/* .fade-leave-active in <2.1.8 */
-    {
-    opacity: 0;
+  /* .fade-leave-active in <2.1.8 */
+{
+  opacity: 0;
 }
 </style>

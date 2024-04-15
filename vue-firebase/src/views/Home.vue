@@ -1,24 +1,29 @@
 <template>
-<div class="h-screen grid grid-cols-[.3fr_.7fr] pt-20">
+  <!-- <messaging-creators></messaging-creators> -->
+  <!-- <invites-container></invites-container> -->
+  <div class="h-screen grid grid-cols-[.3fr_.7fr] pt-20">
 
     <div class="w-full flex flex-col">
-        <!-- <messaging-creators></messaging-creators> -->
-        <chats-container></chats-container>
+      <!-- <messaging-creators></messaging-creators> -->
+      <!-- <chats-container></chats-container> -->
+      <conversations-container></conversations-container>
+
     </div>
-    <div class="bg-[#f8e9e5]"></div>
-</div>
-<!-- <invites-container></invites-container>
- -->
+    <div class="bg-[#f8e9e5] pt-20">
+      <chat/>
+    </div>
+  </div>
+
 </template>
 
 <script>
 export default {
-    data() {
-        return {}
-    },
-    computed: {},
-    methods: {},
-    inheritAttrs: false
+  data() {
+    return {}
+  },
+  computed: {},
+  methods: {},
+  inheritAttrs: false
 }
 </script>
 
@@ -48,4 +53,5 @@ h1 {
     color: white;
     font-size: 18px;
 } */
+
 </style>
