@@ -1062,7 +1062,7 @@ async function get_received_messages(uid) {
 		for (let i = 0; i < received_messages.length; i++) {
 			if (received_messages[i].dbid == message.key) {
 				received_messages.splice(i, 1);
-				update_messages();
+				//update_messages();
 				break;
 			}
 		}
@@ -1256,7 +1256,7 @@ async function get_group_file_from_id(
 	} else {
 		sent_messages.push(output);
 	}
-	update_messages();
+	//update_messages();
 }
 
 async function get_sent_group_messages(groupId) {
@@ -1352,7 +1352,7 @@ function unload_conversation() {
 		otherdisplay = null;
 		received_messages = [];
 		sent_messages = [];
-		update_messages();
+		//update_messages();
 		//document.getElementById("message-container").innerHTML = "";
 	}
 }
@@ -1385,7 +1385,7 @@ function unload_group() {
 		otherdisplay = null;
 		received_messages = [];
 		sent_messages = [];
-		update_messages();
+		//update_messages();
 		//document.getElementById("message-container").innerHTML = "";
 	}
 }
