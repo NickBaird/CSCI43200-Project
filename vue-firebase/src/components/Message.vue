@@ -2,10 +2,10 @@
 <div v-if="!deleted" class="relative">
     <div v-if="message.startsWith('blob:') ">
         <div v-if="type.startsWith('image')">
-            <img :src="message" />
+            <img :src="message" class=""/>
         </div>
         <div v-else>
-            <a :href="message" target="_blank">Open File</a>
+            <a :href="message" target="_blank" class="flex items-center gap-2 text-blue-700 hover:text-blue-800 transition-colors hover:underline "><vue-feather type="file-text"></vue-feather>Open File</a>
         </div>
 
         <!--  -->
