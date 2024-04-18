@@ -15,7 +15,7 @@
             <p class="text-sm">{{ otherUID }}</p>
         </div>
         <chat-container :conversationLoad="conversation" :update="updateMessages" class="overflow-y-scroll h-full "></chat-container>
-        <message-sender :otherUID="otherUID" @update-messages="updateMessages" class="sticky bottom-0"></message-sender>
+        <message-sender :otherUID="otherUID" :type="type" @update-messages="updateMessages" class="sticky bottom-0"></message-sender>
     </div>
 </div>
 </template>
@@ -34,12 +34,14 @@ export default {
             updatedMessages: [],
             user: null,
             otherDisplay: '',
+            type: ''
         }
     },
     methods: {
-        async loadConversation(conversationData, uid) {
+        async loadConversation(conversationData, uid, type) {
             this.conversation = conversationData;
             this.otherUID = uid;
+            this.type = type;
             this.updateOtherDisplay(uid); // Fetch and update display information
         },
         loadedMessages(loaded) {

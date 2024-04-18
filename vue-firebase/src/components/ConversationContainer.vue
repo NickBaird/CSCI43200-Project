@@ -1,12 +1,12 @@
 <template>
-<div class="h-20 flex items-center justify-between bg-white w-full px-4 hover:bg-slate-400 transition-colors cursor-pointer" @click="loadData(uid)">
+<div class="h-20 flex items-center justify-between bg-white w-full px-4 hover:bg-slate-400 transition-colors cursor-pointer" @click="loadData(uid, type)">
     <div class="flex flex-col">
         <h3 class="text-2xl font-semibold">{{ display }}</h3>
         <p class="font-light ">{{ uid  }}</p>
     </div>
     <div>
         <!-- <button >Load</button> -->
-        <button v-if="isShowingSee" @click="seeData(responseData, uid)" >See</button>
+        <button v-if="isShowingSee" @click="seeData(responseData, uid, type)" >See</button>
     </div>
 
     <!-- <div v-if="dataLoaded">
@@ -19,7 +19,8 @@
 
 <script>
 import {
-    load_conversation
+    load_conversation,
+    load_group
 } from '../../js.js';
 
 export default {
@@ -34,22 +35,35 @@ export default {
         }
     },
     methods: {
-        async loadData(uid) {
-            //console.log(uid);
-            try {
-                this.responseData = await load_conversation(uid);
-                this.isShowingSee = !this.isShowingSee;
-                //let arr = [...this.responseData[0], ...this.responseData[1]]
-                //console.log(this.responseData);
-                //this.$emit('load-conversation', this.responseData);
-            } catch (e) {
-                console.log(e);
+        async loadData(uid, type) {
+            console.log(type);
+            if (type == 'convo') {
+                try {
+                    this.responseData = await load_conversation(uid);
+                    this.isShowingSee = !this.isShowingSee;
+                    //let arr = [...this.responseData[0], ...this.responseData[1]]
+                    //console.log(this.responseData);
+                    //this.$emit('load-conversation', this.responseData);
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+            else if (type == 'group') {
+                try {
+                    this.responseData = await load_group(uid);
+                    this.isShowingSee = !this.isShowingSee;
+                    //let arr = [...this.responseData[0], ...this.responseData[1]]
+                    //console.log(this.responseData);
+                    //this.$emit('load-conversation', this.responseData);
+                } catch (e) {
+                    console.log(e);
+                }
             }
             // const invitesGot = get_conversation_invites().then((response) => {
             //     console.log(response);
             //     return response});
         },
-        seeData(data, uid) {
+        seeData(data, uid, type) {
             this.dataLoaded = true;
 
             // let messagesArr = null;
@@ -69,10 +83,11 @@ export default {
             });
             this.messages = this.sentMessages.concat(this.receivedMessages);
             this.messages.sort((a, b) => a.timestamp - b.timestamp);
-            this.$emit('load-conversation', this.messages, uid);
+            console.log(data);
+            this.$emit('load-conversation', this.messages, uid, type);
         },
       
     },
-    props: ['display', 'uid', 'loadedMessages'],
+    props: ['display', 'uid', 'loadedMessages', 'type'],
 }
 </script>
