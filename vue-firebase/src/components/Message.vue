@@ -60,6 +60,11 @@ export default {
     methods: {
         deleteMessageVue(uid, id, typeChat) {
             // Deletion logic here
+            if (typeChat == 'convo') {
+                delete_conversation_message(uid, id);
+            } else if (typeChat == 'group') {
+                delete_group_message(uid, id);
+            }
             this.deleted = true;
         },
         fetchDisplayName() {
