@@ -1,9 +1,9 @@
 <template>
     <div class="w-fit text-nowrap flex flex-col items-start gap-2">
-        <h1 class="text-2xl font-semibold mb-2 w-full">Invites</h1>
+        <!-- <h1 class="text-2xl font-semibold mb-2 w-full underline">Invites</h1> -->
         <button @click="loadData()" class="text-blue-400" v-if="!dataLoaded"><vue-feather type="rotate-cw" ></vue-feather></button>
-        <div v-if="dataLoaded">
-            <div v-for="invite in invites" :key="invite.key">
+        <div v-if="dataLoaded" class="flex flex-col gap-4  ">
+            <div v-for="invite in invites" :key="invite.key" class="border-y-2 py-2 ">
                 <incomming-invite :display="invite.display" :convKey="invite.key"></incomming-invite>
             </div>
             <div v-if="invites.length === 0">No incoming invites</div>

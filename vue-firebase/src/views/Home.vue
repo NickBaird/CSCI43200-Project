@@ -1,12 +1,12 @@
 <template>
 <!-- <messaging-creators></messaging-creators>
 <invites-container></invites-container> -->
-<div class="h-svh w-full  grid grid-cols-[.3fr_.7fr] pt-20 overflow-clip">
+<div class="h-screen w-full  grid grid-cols-[.3fr_.7fr] pt-20 overflow-clip">
 
-    <div class="bg-[#f9f1ef]  w-full flex flex-col">
+    <div class="bg-[#f9f1ef]  w-full flex flex-col ">
         <!-- <messaging-creators></messaging-creators> -->
         <!-- <chats-container></chats-container> -->
-        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages"></conversations-container>
+        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages" ></conversations-container>
 
     </div>
     <div class="bg-[#f8e9e5] flex flex-col h-screen    ">
