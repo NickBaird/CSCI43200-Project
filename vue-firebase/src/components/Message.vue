@@ -1,5 +1,11 @@
 <template>
-<div v-if="!deleted" class="relative">
+<div v-if="!deleted" class="flex flex-col w-full relative">
+    <div class="font-bold "
+    v-if="typeChat == 'group' && me != 'yes'">{{ uid }}:</div>
+    <div :class="{ 
+            'bg-sky-300 p-4 self-end rounded-t-lg rounded-l-lg m-2 max-w-96': (me == 'yes'),
+            'bg-zinc-300 p-4 self-start rounded-t-lg rounded-r-lg m-2 max-w-96': (me != 'yes')
+        } ">
     <div v-if="message.startsWith('blob:') ">
         <div v-if="type.startsWith('image')">
             <img :src="message" class=""/>
@@ -11,12 +17,13 @@
         <!--  -->
         <!-- {{ type }} -->
     </div>
-    <div v-else>
+    <div v-else class="">
         {{ message }}
     </div>
     <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id, typeChat)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
         <vue-feather type="trash-2" size="22" class=""></vue-feather>
     </button>
+</div>
 </div>
 </template>
 

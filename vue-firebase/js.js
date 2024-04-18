@@ -491,6 +491,9 @@ async function leave_conversation(uid) {
 async function leave_group(groupId) {
 	//await delete_group_messages(groupId);
 	await database
+		.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid)
+		.set(null);
+	await database
 		.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId)
 		.set(null);
 	if (is_admin(groupId)) {
@@ -499,9 +502,6 @@ async function leave_group(groupId) {
 			.set(null);
 		// Add assigning another admin if there is only one admin
 	}
-	await database
-		.ref("/groups/" + groupId + "/members/" + auth.currentUser.uid)
-		.set(null);
 }
 
 async function delete_conversation_message(uid, msgId) {
@@ -902,7 +902,7 @@ async function send_group_message(groupId, message) {
 				nonce: sodium.to_hex(nonce),
 			};
 		}
-		await send_group_invite(groupId, members[i]);
+		//await send_group_invite(groupId, members[i]);
 		sent[members[i]] = await database
 			.ref(
 				"/group_messages/" +
