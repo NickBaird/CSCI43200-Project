@@ -6,16 +6,17 @@
     <div class="bg-[#f9f1ef]  w-full flex flex-col ">
         <!-- <messaging-creators></messaging-creators> -->
         <!-- <chats-container></chats-container> -->
-        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages" ></conversations-container>
 
+        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages"></conversations-container>
+        <!-- <groups0c -->
     </div>
     <div class="bg-[#f8e9e5] flex flex-col h-screen    ">
         <div class="sticky top-0 bg-zinc-600 z-10  text-[#f8e9e5] p-8 flex flex-col">
             <p class="text-2xl font-semibold">{{ otherDisplay }}</p>
             <p class="text-sm">{{ otherUID }}</p>
         </div>
-        <chat-container :conversationLoad="conversation" :update="updateMessages" class="overflow-y-scroll h-full "></chat-container>
-        <message-sender :otherUID="otherUID" :type="type" @update-messages="updateMessages" class="sticky bottom-0"></message-sender>
+        <chat-container ref="chatContainer" :conversationLoad="conversation" :update="updateMessages" class="overflow-y-scroll h-full "></chat-container>
+        <message-sender :otherUID="otherUID" :type="type" @message-sent="scrollToBottom" @update-messages="updateMessages" class="sticky bottom-0"></message-sender>
     </div>
 </div>
 </template>
@@ -60,6 +61,19 @@ export default {
                 this.otherDisplay = ''; // Clear or manage display info appropriately on error
             }
         },
+        scrollToBottom() {
+            this.$nextTick(() => {
+                setTimeout(() => { // Add a small delay
+                    
+                    const chatContainerElement = this.$refs.chatContainer.$el;
+                    if (chatContainerElement) {
+                        chatContainerElement.scrollTop = chatContainerElement.scrollHeight;
+                    } else {
+                     
+                    }
+                }, 100); // Adjust delay as necessary
+            });
+        }
 
     },
 
@@ -68,6 +82,10 @@ export default {
 </script>
 
 <style scoped>
+.chat-container {
+    overflow-y: auto; /* Ensure this is set correctly */
+    height: 100%; /* Make sure the height is constrained */
+}
 /* main {
     margin-top: 100px;
 }
