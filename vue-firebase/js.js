@@ -14,7 +14,11 @@ export {
 	load_conversation,
 	update_messages,
 	public_key,
-	send_message
+	send_message,
+	update_groups,
+	get_group_members,
+	load_group,
+	send_group_message
 };
 
 const firebaseConfig = {
@@ -700,9 +704,11 @@ function group_name_listener(groupId) {
 }
 
 async function set_group_name(groupId, name) {
+	let members = await get_group_members(groupId);
+	console.log(members);
 	if (await is_admin(groupId)) {
-		for (member of await get_group_members(groupId)) {
-			set_group_name_for_uid(groupId, name, member);
+		for (let i = 0; i < members.length; i++) {
+			set_group_name_for_uid(groupId, name, members[i]);
 		}
 	} else {
 		// Prompt user is not admin
@@ -713,9 +719,9 @@ async function set_group_name(groupId, name) {
 async function set_group_name_for_uid(groupId, name, uid) {
 	if (await is_admin(groupId)) {
 		await add_to_map(uid);
-		msg = await sign_message(name);
-		nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-		encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+		let msg = await sign_message(name);
+		let nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+		let encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
 
 		var payload = {
 			timestamp: new Date().getTime(),
@@ -801,6 +807,7 @@ async function new_group(name) {
 	await database
 		.ref("/users/" + auth.currentUser.uid + "/groups/" + groupId)
 		.set(true);
+	console.log(groupId);
 	await set_group_name(groupId, name);
 }
 
@@ -864,14 +871,14 @@ async function send_group_message(groupId, message) {
 	members.splice(members.indexOf(auth.currentUser.uid), 1);
 	members.push(auth.currentUser.uid);
 
-	for (uid of members) {
-		await add_to_map(uid);
+	for (let i = 0; i < members.length; i++) {
+		await add_to_map(members[i]);
 		var msg = await sign_message(message);
 		var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-		var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[uid].ctx);
+		var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[members[i]].ctx);
 
 		var payload = null;
-		if (uid == auth.currentUser.uid) {
+		if (members[i] == auth.currentUser.uid) {
 			var payload = {
 				timestamp: new Date().getTime(),
 				payload: sodium.to_hex(encrypted),
@@ -885,13 +892,13 @@ async function send_group_message(groupId, message) {
 				nonce: sodium.to_hex(nonce),
 			};
 		}
-		await send_group_invite(groupId, uid);
-		sent[uid] = await database
+		await send_group_invite(groupId, members[i]);
+		sent[members[i]] = await database
 			.ref(
 				"/group_messages/" +
 					groupId +
 					"/" +
-					uid +
+					members[i] +
 					"/" +
 					auth.currentUser.uid
 			)
@@ -1138,7 +1145,7 @@ async function get_sent_messages(uid) {
 
 async function get_received_group_messages(groupId) {
 	received_messages = [];
-	ref = database.ref("/groups/" + groupId + "/members");
+	let ref = database.ref("/groups/" + groupId + "/members");
 	refs.push(ref);
 	ref.on("child_added", (member) => {
 		if (member.key != auth.currentUser.uid) {
@@ -1149,7 +1156,7 @@ async function get_received_group_messages(groupId) {
 }
 
 async function get_received_group_messages_from_uid(groupId, uid) {
-	ref = database.ref(
+	let ref = database.ref(
 		"/group_messages/" + groupId + "/" + auth.currentUser.uid + "/" + uid
 	);
 	refs.push(ref);
@@ -1174,7 +1181,7 @@ async function get_received_group_messages_from_uid(groupId, uid) {
 				uid: uid,
 			};
 			received_messages.push(output);
-			update_messages();
+			//update_messages();
 		} else {
 			get_group_file_from_id(
 				groupId,
@@ -1192,7 +1199,7 @@ async function get_received_group_messages_from_uid(groupId, uid) {
 		for (i in received_messages) {
 			if (received_messages[i].dbid == message.key) {
 				received_messages.splice(i, 1);
-				update_messages();
+				//update_messages();
 				break;
 			}
 		}
@@ -1290,7 +1297,7 @@ async function get_sent_group_messages(groupId) {
 				uid: auth.currentUser.uid,
 			};
 			sent_messages.push(output);
-			update_messages();
+			//update_messages();
 			console.log("SENT MESSAGE:", output);
 		} else {
 			get_group_file_from_id(
@@ -1309,17 +1316,15 @@ async function get_sent_group_messages(groupId) {
 		for (i in sent_messages) {
 			if (sent_messages[i].dbid == message.key) {
 				sent_messages.splice(i, 1);
-				update_messages();
+				//update_messages();
 				break;
 			}
 		}
 	});
 }
 
-async function new_conversation() {
+async function new_conversation(uid, message) {
 	unload_conversation();
-	var uid = document.getElementById("new-conversation-uid").value;
-	var message = document.getElementById("new-conversation-message").value;
 	await send_message(uid, message);
 	await load_conversation(uid);
 }
@@ -1363,15 +1368,18 @@ function load_group(groupId) {
 	isGroup = true;
 	get_received_group_messages(groupId);
 	get_sent_group_messages(groupId);
+	return {
+		sent: sent_messages,
+		received: received_messages};
 
-	var container = document.getElementById("message-container");
-	container.innerHTML =
-		'<input type="text" id="message-box"><button onclick="send_group_message(\'' +
-		groupId +
-		"', " +
-		"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_group_file('" +
-		groupId +
-		"', document.getElementById('file-upload').files[0]);\">Send File</button>";
+	// var container = document.getElementById("message-container");
+	// container.innerHTML =
+	// 	'<input type="text" id="message-box"><button onclick="send_group_message(\'' +
+	// 	groupId +
+	// 	"', " +
+	// 	"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_group_file('" +
+	// 	groupId +
+	// 	"', document.getElementById('file-upload').files[0]);\">Send File</button>";
 }
 
 function unload_group() {
@@ -1529,27 +1537,38 @@ function update_conversations() {
 }
 
 function update_groups() {
-	var container = document.getElementById("groups-container");
-	container.innerHTML = "";
+	// var container = document.getElementById("groups-container");
+	// container.innerHTML = "";
+	let groups_array = [];
 	groups.forEach((groupId) => {
 		if (!groupsInvalid.includes(groupId)) {
-			container.innerHTML +=
-				'<div class="group" onclick="load_group(\'' +
-				groupId +
-				"')\"><h3>" +
-				groupNames[groupId] +
-				"</h3><br><p>" +
-				groupId +
-				"</p></div> <br>";
-		} else {
-			container.innerHTML +=
-				'<div class="group"><h3>You have been kicked from this group!</h3><br><p>' +
-				groupId +
-				"</p><br><button onclick=\"leave_group('" +
-				groupId +
-				"')\">Remove from groups</button></div><br>";
+			let group_data = {
+				uid: groupId,
+				display: groupNames[groupId]
+			}
+			groups_array.push(group_data);
 		}
 	});
+	return groups_array;
+	// groups.forEach((groupId) => {
+	// 	if (!groupsInvalid.includes(groupId)) {
+	// 		container.innerHTML +=
+	// 			'<div class="group" onclick="load_group(\'' +
+	// 			groupId +
+	// 			"')\"><h3>" +
+	// 			groupNames[groupId] +
+	// 			"</h3><br><p>" +
+	// 			groupId +
+	// 			"</p></div> <br>";
+	// 	} else {
+	// 		container.innerHTML +=
+	// 			'<div class="group"><h3>You have been kicked from this group!</h3><br><p>' +
+	// 			groupId +
+	// 			"</p><br><button onclick=\"leave_group('" +
+	// 			groupId +
+	// 			"')\">Remove from groups</button></div><br>";
+	// 	}
+	// });
 }
 
 function update_invites() {
