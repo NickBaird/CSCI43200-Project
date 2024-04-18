@@ -20,12 +20,18 @@
     </div>
 
     <button @click="loadData()" class=" top-20">
-        <vue-feather type="rotate-cw" v-if="!dataLoaded"></vue-feather>
+        <vue-feather type="rotate-cw" class="m-4" v-if="!dataLoaded"></vue-feather>
     </button>
 
     <div v-if="dataLoaded" class="flex flex-col items-start w-full h-full  overflow-y-scroll ">
         <div v-for="conversation in conversations" :key="conversation.id" class="w-full ">
-            <conversation-container :display="conversation.display" :uid="conversation.uid" :loadedMessages="conversation.messages" :type="this.clicked" @load-conversation="loadConversation"></conversation-container>
+            <conversation-container 
+            :display="conversation.display" 
+            :uid="conversation.uid" 
+            :loadedMessages="conversation.messages" 
+            :type="this.clicked" 
+            :left="left"
+            @load-conversation="loadConversation"></conversation-container>
         </div>
         <div v-if="conversations.length === 0">No conversations</div>
     </div>
@@ -124,6 +130,7 @@ import {
     },
     mounted() {
         this.loadData(); // Ensure loadData is called automatically when the component mounts
-    }
+    },
+    props: ['left']
 }
 </script>

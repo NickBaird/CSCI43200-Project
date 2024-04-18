@@ -9,7 +9,8 @@
         :id="messages.dbid"
         :uid="messages.uid"
         :me="messages.me"
-        :type="messages.type"></Message>
+        :type="messages.type"
+        :typeChat="type"></Message>
     </div>
 </div>
 </template>
@@ -34,7 +35,7 @@ export default {
     },
     computed: {
     },
-    props: ['conversationLoad', 'update'],
+    props: ['conversationLoad', 'update', 'type'],
 }
 </script>
 

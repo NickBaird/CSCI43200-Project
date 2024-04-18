@@ -39,7 +39,7 @@ export default {
     methods: {
         async sendMessageVue(uid, type) {
             if (this.message != '') {
-                console.log("type " + type + " uid " + uid + " message " + this.message);
+                //console.log("type " + type + " uid " + uid + " message " + this.message);
                 if (type == 'convo') {
                     send_message(uid, this.message); // Sends the current message
                     this.message = ''; // Clears the message input after sending

@@ -14,7 +14,7 @@
     <div v-else>
         {{ message }}
     </div>
-    <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
+    <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id, typeChat)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
         <vue-feather type="trash-2" size="22" class=""></vue-feather>
     </button>
 </div>
@@ -22,7 +22,8 @@
 
 <script>
 import {
-    delete_conversation_message
+    delete_conversation_message,
+    delete_group_message
 } from '../../js';
 import VueFeather from 'vue-feather';
 
@@ -36,12 +37,16 @@ export default {
         }
     },
     methods: {
-        deleteMessageVue(uid, id) {
-            delete_conversation_message(uid, id);
+        deleteMessageVue(uid, id, typeChat) {
+            if (typeChat == 'convo') {
+                delete_conversation_message(uid, id);
+            }
+            else if (typeChat == 'group') {
+                delete_group_message(uid, id);
+            }
             this.deleted = true;
-
         }
     },
-    props: ['message', 'id', 'uid', 'me', 'type']
+    props: ['message', 'id', 'uid', 'me', 'type', 'typeChat']
 }
 </script>

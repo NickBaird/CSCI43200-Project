@@ -28,8 +28,8 @@ export default {
     },
     methods: {
         newConversationVue() {
-            console.log(this.newID);
-            console.log(this.newMessage);
+            //console.log(this.newID);
+            //console.log(this.newMessage);
             new_conversation(this.newID, this.newMessage);
         },
 

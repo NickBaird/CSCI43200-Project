@@ -1,5 +1,7 @@
 <template>
-<div class="h-20 flex items-center justify-between bg-white w-full px-4 hover:bg-slate-400 transition-colors cursor-pointer" @click="loadData(uid, type)">
+<div class="h-20 flex items-center justify-between bg-white w-full px-4 hover:bg-slate-400 transition-colors cursor-pointer" 
+@click="loadData(uid, type)"
+v-if="!left.includes(uid)">
     <div class="flex flex-col">
         <h3 class="text-2xl font-semibold">{{ display }}</h3>
         <p class="font-light ">{{ uid  }}</p>
@@ -36,7 +38,7 @@ export default {
     },
     methods: {
         async loadData(uid, type) {
-            console.log(type);
+            //console.log(type);
             if (type == 'convo') {
                 try {
                     this.responseData = await load_conversation(uid);
@@ -83,11 +85,11 @@ export default {
             });
             this.messages = this.sentMessages.concat(this.receivedMessages);
             this.messages.sort((a, b) => a.timestamp - b.timestamp);
-            console.log(data);
+            //console.log(data);
             this.$emit('load-conversation', this.messages, uid, type);
         },
       
     },
-    props: ['display', 'uid', 'loadedMessages', 'type'],
+    props: ['display', 'uid', 'loadedMessages', 'type', 'left'],
 }
 </script>

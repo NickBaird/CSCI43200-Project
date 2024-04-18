@@ -7,23 +7,40 @@
         <!-- <messaging-creators></messaging-creators> -->
         <!-- <chats-container></chats-container> -->
 
-        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages"></conversations-container>
+        <conversations-container 
+        @load-conversation="loadConversation" 
+        @loaded-messages="loadedMessages"
+        :left="left"></conversations-container>
         <!-- <groups0c -->
     </div>
-    <div class="bg-[#f8e9e5] flex flex-col h-screen    ">
+    <div class="bg-[#f8e9e5] flex flex-col h-screen">
+        <div class="sticky top-0 bg-zinc-600 z-10  text-[#f8e9e5] flex flex-row">
         <div class="sticky top-0 bg-zinc-600 z-10  text-[#f8e9e5] p-8 flex flex-col">
             <p class="text-2xl font-semibold">{{ otherDisplay }}</p>
             <p class="text-sm">{{ otherUID }}</p>
         </div>
-        <chat-container ref="chatContainer" :conversationLoad="conversation" :update="updateMessages" class="overflow-y-scroll h-full "></chat-container>
-        <message-sender :otherUID="otherUID" :type="type" @message-sent="scrollToBottom" @update-messages="updateMessages" class="sticky bottom-0"></message-sender>
+            <button class="flex mr-0 ml-auto mr-8 mt-auto mb-auto"
+            v-if="type=='group'"
+            @click="leaveGroup(otherUID)">Leave</button>
+        </div>
+        <chat-container ref="chatContainer" class="overflow-y-scroll h-full "
+        :conversationLoad="conversation" 
+        :update="updateMessages"
+        :type="type"></chat-container>
+        <message-sender class="sticky bottom-0"
+        :otherUID="otherUID" 
+        :type="type" 
+        @message-sent="scrollToBottom" 
+        @update-messages="updateMessages"></message-sender>
     </div>
 </div>
 </template>
 
 <script>
 import {
-    getOtherUserDisplayInfo
+    getOtherUserDisplayInfo,
+    get_group_name,
+    leave_group
 } from "../../js.js";
 
 export default {
@@ -35,7 +52,8 @@ export default {
             updatedMessages: [],
             user: null,
             otherDisplay: '',
-            type: ''
+            type: '',
+            left: []
         }
     },
     methods: {
@@ -43,23 +61,44 @@ export default {
             this.conversation = conversationData;
             this.otherUID = uid;
             this.type = type;
-            this.updateOtherDisplay(uid); // Fetch and update display information
+            this.updateOtherDisplay(uid, type); // Fetch and update display information
         },
         loadedMessages(loaded) {
             this.messages = loaded;
         },
         updateMessages(update) {
             this.conversation = update;
-            console.log(update);
+            //console.log(update);
         },
-        async updateOtherDisplay(uid) {
-            try {
-                const displayInfo = await getOtherUserDisplayInfo(uid); // Fetch display info for the given UID
-                this.otherDisplay = displayInfo;
-            } catch (error) {
-                console.error('Failed to fetch user display info:', error);
-                this.otherDisplay = ''; // Clear or manage display info appropriately on error
+        async updateOtherDisplay(uid, type) {
+            if (type == 'convo') {
+                try {
+                    const displayInfo = await getOtherUserDisplayInfo(uid); // Fetch display info for the given UID
+                    this.otherDisplay = displayInfo;
+                } catch (error) {
+                    console.error('Failed to fetch user display info:', error);
+                    this.otherDisplay = ''; // Clear or manage display info appropriately on error
+                }
             }
+            else if (type == 'group') {
+                try {
+                    const displayInfo = await get_group_name(uid); // Fetch display info for the given UID
+                    this.otherDisplay = displayInfo;
+                } catch (error) {
+                    console.error('Failed to fetch user display info:', error);
+                    this.otherDisplay = ''; // Clear or manage display info appropriately on error
+                }
+            }
+        },
+        leaveGroup(otherUID) {
+            leave_group(otherUID);
+            this.conversation = [],
+            this.messages = [],
+            this.otherUID = '',
+            this.updatedMessages = [],
+            this.otherDisplay = '',
+            this.type = ''
+            this.left.push(otherUID);
         },
         scrollToBottom() {
             this.$nextTick(() => {

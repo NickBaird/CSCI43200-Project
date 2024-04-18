@@ -25,6 +25,9 @@ export {
 	map,
 	verify_message,
 	delete_conversation_message,
+	leave_group,
+	delete_group_message,
+	get_group_name
 };
 
 const firebaseConfig = {
@@ -296,7 +299,7 @@ async function initialize() {
 	});
 
 	groupsRef.on("child_removed", (group) => {
-		console.log("REMOVE");
+		//console.log("REMOVE");
 		remove_from_groups(group.key);
 	});
 }
