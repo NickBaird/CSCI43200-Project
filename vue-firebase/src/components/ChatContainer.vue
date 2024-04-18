@@ -7,7 +7,8 @@
         :uid="messages.uid"
         :me="messages.me"
         :type="messages.type"
-        :typeChat="type"></Message>
+        :typeChat="type"
+        :otherUID="otherUID"></Message>
     </div>
 </div>
 </template>
@@ -32,7 +33,7 @@ export default {
     },
     computed: {
     },
-    props: ['conversationLoad', 'update', 'type'],
+    props: ['conversationLoad', 'update', 'type', 'otherUID'],
 }
 </script>
 

@@ -26,7 +26,7 @@
             <div class="text-sm mb-2 text-gray-500 group-hover:text-gray-900" v-if="typeChat == 'group' && me != 'yes'">{{ otherDisplay }}</div> 
            <div>{{ message }}</div> 
         </div>
-        <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id, typeChat)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
+        <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id, typeChat, otherUID)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
             <vue-feather type="trash-2" size="22" class=""></vue-feather>
         </button>
     </div>
@@ -58,12 +58,13 @@ export default {
         }
     },
     methods: {
-        deleteMessageVue(uid, id, typeChat) {
+        deleteMessageVue(uid, id, typeChat, otherUID) {
             // Deletion logic here
             if (typeChat == 'convo') {
                 delete_conversation_message(uid, id);
             } else if (typeChat == 'group') {
-                delete_group_message(uid, id);
+                console.log(otherUID + " " + id);
+                delete_group_message(otherUID, id);
             }
             this.deleted = true;
         },
@@ -76,7 +77,7 @@ export default {
             });
         }
     },
-    props: ['message', 'id', 'uid', 'me', 'type', 'typeChat'],
+    props: ['message', 'id', 'uid', 'me', 'type', 'typeChat', 'otherUID'],
     mounted() {
         if (this.typeChat == 'group' && this.me != 'yes') {
             this.fetchDisplayName();

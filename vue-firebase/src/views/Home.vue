@@ -24,8 +24,16 @@
                 <vue-feather type="log-out"> </vue-feather>
             </div>
         </div>
-        <chat-container ref="chatContainer" class="overflow-y-scroll h-full custom-scrollbar" :conversationLoad="conversation" :update="updateMessages" :type="type"></chat-container>
-        <message-sender class="sticky bottom-0" :otherUID="otherUID" :type="type" @message-sent="scrollToBottom" @update-messages="updateMessages"></message-sender>
+        <chat-container ref="chatContainer" class="overflow-y-scroll h-full custom-scrollbar" 
+        :conversationLoad="conversation" 
+        :update="updateMessages" 
+        :type="type"
+        :otherUID="otherUID"></chat-container>
+        <message-sender class="sticky bottom-0" 
+        :otherUID="otherUID" 
+        :type="type" 
+        @message-sent="scrollToBottom" 
+        @update-messages="updateMessages"></message-sender>
     </div>
 </div>
 </template>

@@ -530,20 +530,20 @@ async function delete_group_message(groupId, msgId) {
 	var sent = msg.child("sent").val();
 	var fileId = msg.child("id").val();
 
-	console.log(msg.val());
+	//console.log(msg.val());
 
 	if (sent != null) {
-		for (uid of Object.keys(sent)) {
+		for (let i = 0; i < Object.keys(sent).length; i++) {
 			database
 				.ref(
 					"/group_messages/" +
 						groupId +
 						"/" +
-						uid +
+						Object.keys(sent)[i] +
 						"/" +
 						auth.currentUser.uid +
 						"/" +
-						sent[uid]
+						sent[Object.keys(sent)[i]]
 				)
 				.set(null);
 		}
@@ -1307,7 +1307,7 @@ async function get_sent_group_messages(groupId) {
 	});
 
 	ref.on("child_removed", (message) => {
-		for (i in sent_messages) {
+		for (let i = 0; i < sent_messages.length; i++) {
 			if (sent_messages[i].dbid == message.key) {
 				sent_messages.splice(i, 1);
 				//update_messages();
