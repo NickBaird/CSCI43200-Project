@@ -8,7 +8,8 @@
         :message="messages.message"
         :id="messages.dbid"
         :uid="messages.uid"
-        :me="messages.me"></Message>
+        :me="messages.me"
+        :type="messages.type"></Message>
     </div>
 </div>
 </template>

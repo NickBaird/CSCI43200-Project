@@ -1,15 +1,34 @@
 <template>
-    <div v-if="!deleted" class="">
-        {{ message }}
-        <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id)">Delete</button>
+<div v-if="!deleted" class="relative">
+    <div v-if="message.startsWith('blob:') ">
+        <div v-if="type.startsWith('image')">
+            <img :src="message" />
+        </div>
+        <div v-else>
+            <a :href="message" target="_blank">Open File</a>
+        </div>
+
+        <!--  -->
+        <!-- {{ type }} -->
     </div>
+    <div v-else>
+        {{ message }}
+    </div>
+    <button v-if="me == 'yes'" @click="deleteMessageVue(uid, id)" class="absolute right-0 translate-x-8 -translate-y-4 cursor-pointer hover:text-red-500 text-gray-400 transition-colors">
+        <vue-feather type="trash-2" size="22" class=""></vue-feather>
+    </button>
+</div>
 </template>
 
 <script>
-import { delete_conversation_message } from '../../js';
+import {
+    delete_conversation_message
+} from '../../js';
+import VueFeather from 'vue-feather';
 
 export default {
     components: {
+        VueFeather
     },
     data() {
         return {
@@ -20,8 +39,9 @@ export default {
         deleteMessageVue(uid, id) {
             delete_conversation_message(uid, id);
             this.deleted = true;
+
         }
     },
-    props: ['message', 'id', 'uid', 'me']
+    props: ['message', 'id', 'uid', 'me', 'type']
 }
 </script>

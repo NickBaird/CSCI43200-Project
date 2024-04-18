@@ -1,5 +1,5 @@
-export { 
-	register2, 
+export {
+	register2,
 	login2,
 	send_group_invite,
 	new_conversation,
@@ -24,7 +24,7 @@ export {
 	add_to_map,
 	map,
 	verify_message,
-	delete_conversation_message
+	delete_conversation_message,
 };
 
 const firebaseConfig = {
@@ -242,9 +242,7 @@ async function initialize() {
 	console.log("INIT");
 
 	public_key = (
-		await database
-			.ref("/users/" + auth.currentUser.uid + "/public")
-			.get()
+		await database.ref("/users/" + auth.currentUser.uid + "/public").get()
 	).val();
 	console.log(public_key);
 	publicSignature = (
@@ -333,26 +331,26 @@ export const getUserDisplayInfo = () => {
 	});
 };
 export const getOtherUserDisplayInfo = (uid) => {
-    return new Promise((resolve, reject) => {
-        if (!uid) {
-            reject("No UID provided.");
-            return;
-        }
-        database
-            .ref("/users/" + uid + "/display")
-            .get()
-            .then((snapshot) => {
-                if (snapshot.exists()) {
-                    resolve(snapshot.val()); // Resolves with the display information
-                } else {
-                    reject("Display info not found.");
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching user display info: ", error);
-                reject(error); // Rejects the promise if there's an error fetching the data
-            });
-    });
+	return new Promise((resolve, reject) => {
+		if (!uid) {
+			reject("No UID provided.");
+			return;
+		}
+		database
+			.ref("/users/" + uid + "/display")
+			.get()
+			.then((snapshot) => {
+				if (snapshot.exists()) {
+					resolve(snapshot.val()); // Resolves with the display information
+				} else {
+					reject("Display info not found.");
+				}
+			})
+			.catch((error) => {
+				console.error("Error fetching user display info: ", error);
+				reject(error); // Rejects the promise if there's an error fetching the data
+			});
+	});
 };
 
 async function add_to_map(uid) {
@@ -756,8 +754,8 @@ async function get_conversation_invites() {
 					.then((display) => {
 						let invite_obj = {
 							display: display.val(),
-							key: conversation.key
-						}
+							key: conversation.key,
+						};
 						conversation_invites.push(invite_obj);
 						//update_invites(); // I don't like this
 					});
@@ -795,7 +793,6 @@ async function get_group_invites() {
 
 	//console.log(conversation_invites);
 }
-
 
 async function new_group(name) {
 	var groupId = sodium.to_hex(
@@ -835,7 +832,7 @@ async function send_message(uid, message) {
 		.push(payload);
 }
 
-async function send_file(uid, file) {
+export async function send_file(uid, file) {
 	if (file.size <= 100000) {
 		await add_to_map(uid);
 		var contents = await sign_message(
@@ -881,7 +878,11 @@ async function send_group_message(groupId, message) {
 		await add_to_map(members[i]);
 		var msg = await sign_message(message);
 		var nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-		var encrypted = sodium.crypto_secretbox_easy(msg, nonce, map[members[i]].ctx);
+		var encrypted = sodium.crypto_secretbox_easy(
+			msg,
+			nonce,
+			map[members[i]].ctx
+		);
 
 		var payload = null;
 		if (members[i] == auth.currentUser.uid) {
@@ -1030,12 +1031,9 @@ async function get_received_messages(uid) {
 			if (type.indexOf("image") >= 0) {
 				output = {
 					dbid: message.key,
-					message:
-						'<img src="' +
-						URL.createObjectURL(
-							new Blob([decrypted], { type: type })
-						) +
-						'" />',
+					message: URL.createObjectURL(
+						new Blob([decrypted], { type: type })
+					),
 					type: type,
 					timestamp: timestamp,
 					uid: uid,
@@ -1043,14 +1041,9 @@ async function get_received_messages(uid) {
 			} else {
 				output = {
 					dbid: message.key,
-					message:
-						'<a href="' +
-						URL.createObjectURL(
-							new Blob([decrypted], { type: type })
-						) +
-						'" >Download File</a><br><h6>Filetype: ' +
-						type +
-						"</h6>",
+					message: URL.createObjectURL(
+						new Blob([decrypted], { type: type })
+					),
 					type: type,
 					timestamp: timestamp,
 					uid: uid,
@@ -1106,12 +1099,9 @@ async function get_sent_messages(uid) {
 			if (type.indexOf("image") >= 0) {
 				var output = {
 					dbid: message.key,
-					message:
-						'<img src="' +
-						URL.createObjectURL(
-							new Blob([decrypted], { type: type })
-						) +
-						'" />',
+					message: URL.createObjectURL(
+						new Blob([decrypted], { type: type })
+					),
 					type: type,
 					timestamp: timestamp,
 					uid: uid,
@@ -1119,14 +1109,9 @@ async function get_sent_messages(uid) {
 			} else {
 				var output = {
 					dbid: message.key,
-					message:
-						'<a href="' +
-						URL.createObjectURL(
-							new Blob([decrypted], { type: type })
-						) +
-						'" >Download File</a><br><h6>Filetype: ' +
-						type +
-						"</h6>",
+					message: URL.createObjectURL(
+						new Blob([decrypted], { type: type })
+					),
 					type: type,
 					timestamp: timestamp,
 					uid: uid,
@@ -1343,7 +1328,8 @@ async function load_conversation(uid) {
 	await get_sent_messages(uid);
 	return {
 		sent: sent_messages,
-		received: received_messages};
+		received: received_messages,
+	};
 
 	// var container = document.getElementById("message-container");
 	// container.innerHTML =
@@ -1376,7 +1362,8 @@ function load_group(groupId) {
 	get_sent_group_messages(groupId);
 	return {
 		sent: sent_messages,
-		received: received_messages};
+		received: received_messages,
+	};
 
 	// var container = document.getElementById("message-container");
 	// container.innerHTML =
@@ -1444,8 +1431,8 @@ function update_messages() {
 					let message_object = {
 						id: received_messages[rcount].dbid,
 						display: map[received_messages[rcount].uid].display,
-						message: received_messages[rcount].message
-					}
+						message: received_messages[rcount].message,
+					};
 					messages_array.push(message_object);
 					// container.innerHTML +=
 					// 	'<div class="other" id="' +
@@ -1460,8 +1447,8 @@ function update_messages() {
 					let message_object = {
 						id: received_messages[scount].dbid,
 						display: map[received_messages[scount].uid].display,
-						message: received_messages[scount].message
-					}
+						message: received_messages[scount].message,
+					};
 					messages_array.push(message_object);
 					// container.innerHTML +=
 					// 	'<div class="you" id="' +
@@ -1480,8 +1467,8 @@ function update_messages() {
 				let message_object = {
 					id: received_messages[rcount].dbid,
 					display: map[received_messages[rcount].uid].display,
-					message: received_messages[rcount].message
-				}
+					message: received_messages[rcount].message,
+				};
 				messages_array.push(message_object);
 				// container.innerHTML +=
 				// 	'<div class="other" id="' +
@@ -1498,8 +1485,8 @@ function update_messages() {
 				let message_object = {
 					id: received_messages[scount].dbid,
 					display: map[received_messages[scount].uid].display,
-					message: received_messages[scount].message
-				}
+					message: received_messages[scount].message,
+				};
 				messages_array.push(message_object);
 				// container.innerHTML +=
 				// 	'<div class="you" id="' +
@@ -1527,8 +1514,8 @@ function update_conversations() {
 	conversations.forEach((uid) => {
 		let conv_data = {
 			uid: uid,
-			display: map[uid].display
-		}
+			display: map[uid].display,
+		};
 		conversations_array.push(conv_data);
 		// container.innerHTML +=
 		// 	'<div class="conversation" onclick="load_conversation(\'' +
@@ -1550,8 +1537,8 @@ function update_groups() {
 		if (!groupsInvalid.includes(groupId)) {
 			let group_data = {
 				uid: groupId,
-				display: groupNames[groupId]
-			}
+				display: groupNames[groupId],
+			};
 			groups_array.push(group_data);
 		}
 	});
@@ -1585,10 +1572,13 @@ function update_invites() {
 	if (conversation_invites.length > 0) {
 		conversation_invites.forEach((invite) => {
 			console.log(invite);
-			container.innerHTML += 
-			'<div class="invite">' + invite.display + 
-			'<button onclick="accept_conversation_invite(' + invite.key + ')">Accept</button>'
-			"</div>";
+			container.innerHTML +=
+				'<div class="invite">' +
+				invite.display +
+				'<button onclick="accept_conversation_invite(' +
+				invite.key +
+				')">Accept</button>';
+			("</div>");
 		});
 	} else {
 		container.innerHTML += "<p>None</p>";

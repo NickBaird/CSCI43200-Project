@@ -7,11 +7,11 @@
     <button @click="sendMessageVue(otherUID, type)" class="flex items-center bg-blue-500 h-full  rounded-md px-4">
         <vue-feather type="send" class="text-white"></vue-feather>
     </button>
-    <input type='file' id='file-upload' class="hidden" />
-    <label for="file-upload" class="flex items-center bg-yellow-500 h-full  rounded-md px-4 cursor-pointer">
+    <input type='file' id='file-upload' class="hidden" @change="handleFileUpload" />
+    <label for="file-upload" class="flex items-center bg-yellow-500 h-full rounded-md px-4 cursor-pointer">
         <vue-feather type="paperclip" class="text-white"></vue-feather>
     </label>
-    <button @click="">Send File</button>
+    <!-- <button @click="">Send File</button> -->
 </div>
 </template>
 
@@ -20,7 +20,8 @@ import {
     send_message,
     load_conversation,
     send_group_message,
-    load_group
+    load_group,
+    send_file, // make sure to import send_file
 } from '../../js.js';
 import VueFeather from "vue-feather";
 
@@ -47,7 +48,7 @@ export default {
                         setTimeout(() => {
                             this.reloadChat(this.responseData, uid); // Passes the fetched data to reloadChat
                             this.$emit('message-sent'); // Notify parent component
-                                }, 500);
+                        }, 500);
                     } catch (e) {
                         console.log(e);
                     }
@@ -67,6 +68,22 @@ export default {
                 this.message = '';
             }
         },
+        async handleFileUpload(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            const file = files[0];
+            try {
+                await send_file(this.otherUID, file); // Assumes otherUID is the uid needed
+                console.log("file sent successfully");
+                setTimeout(() => {
+                    this.reloadChat(this.responseData, this.otherUID); // Passes the fetched data to reloadChat
+                    this.$emit('message-sent'); // Notify parent component
+                }, 500);
+            } catch (error) {
+                console.error("Error sending file:", error);
+            }
+        },
         async reloadChat(data, uid, type) {
             if (type == 'convo') {
                 try {
@@ -74,8 +91,7 @@ export default {
                 } catch (e) {
                     console.log(e); // Log any errors during fetching or processing
                 }
-            }
-            else if (type == 'group') {
+            } else if (type == 'group') {
                 try {
                     this.responseData = await load_group(uid);
                 } catch (e) {
@@ -83,7 +99,6 @@ export default {
                 }
             }
 
-            
             if (data && data.sent && data.received) { // Checks if data is valid and has necessary properties
                 let sentMessages = data.sent.map(obj => ({
                     ...obj,
