@@ -5,3 +5,20 @@
 :root {
 	background-color: #edf4ed;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 16px; /* Custom scrollbar width */
+    cursor: pointer;
+}
+
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    cursor: pointer;
+    background-color: rgb(92, 56, 56); /* Thumb color */
+    border-radius: 8px;
+  /*  border: px solid #f0f0f0;  Creates padding around the thumb */
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+    display: none !important;
+}

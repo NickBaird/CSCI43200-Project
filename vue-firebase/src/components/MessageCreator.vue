@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white z-30">
+    <div class="bg-white z-30 shadow-xl rounded-lg ">
       <button @click="close" class="self-start p-4 ">
         <vue-feather type="x-square" class="text-red-500"></vue-feather>
       </button>

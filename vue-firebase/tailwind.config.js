@@ -4,5 +4,12 @@ export default {
 	theme: {
 		extend: {},
 	},
-	plugins: [],
+	plugins: [
+		require("tailwind-scrollbar"), // Add this line
+		function ({ addBase }) {
+			addBase({
+				"::-webkit-scrollbar-button": { display: "none" },
+			});
+		},
+	],
 };

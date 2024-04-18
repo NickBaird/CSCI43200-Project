@@ -23,7 +23,7 @@
         <vue-feather type="rotate-cw" class="m-4" v-if="!dataLoaded"></vue-feather>
     </button>
 
-    <div v-if="dataLoaded" class="flex flex-col items-start w-full h-full  overflow-y-scroll ">
+    <div v-if="dataLoaded" class="flex flex-col items-start w-full h-full custom-scrollbar overflow-y-scroll  ">
         <div v-for="conversation in conversations" :key="conversation.id" class="w-full ">
             <conversation-container 
             :display="conversation.display" 
@@ -134,3 +134,7 @@ import {
     props: ['left']
 }
 </script>
+
+<style scoped>
+
+</style>
