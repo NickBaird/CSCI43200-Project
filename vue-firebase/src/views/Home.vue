@@ -7,34 +7,25 @@
         <!-- <messaging-creators></messaging-creators> -->
         <!-- <chats-container></chats-container> -->
 
-        <conversations-container 
-        @load-conversation="loadConversation" 
-        @loaded-messages="loadedMessages"
-        :left="left"></conversations-container>
+        <conversations-container @load-conversation="loadConversation" @loaded-messages="loadedMessages" :left="left" @message-sent="scrollToBottom"></conversations-container>
         <!-- <groups0c -->
     </div>
-    <div class="bg-[#f8e9e5] flex flex-col h-screen">
-        <div class="sticky top-0 bg-zinc-600 z-10  text-[#f8e9e5] flex flex-row">
-        <div class="sticky top-0 bg-zinc-600 z-10  text-[#f8e9e5] p-8 flex flex-col">
-            <p class="text-2xl font-semibold">{{ otherDisplay }}</p>
-            <p class="text-sm">{{ otherUID }}</p>
+    <div class="bg-[#f8e9e5] flex flex-col h-screen ">
+        <div class="sticky top-0 p-8 bg-zinc-600 z-10  text-[#f8e9e5] flex flex-row items-center justify-between">
+            <div class=" flex flex-col relative">
+                <p class="text-2xl font-semibold">{{ otherDisplay }}</p>
+                <p @click="copyToClipboard(otherUID)" class="text-sm  hover:bg-zinc-700 bg-opacity-5 hover:px-2 py-1 rounded-md transition-all cursor-pointer hover:text-blue-500 ">{{ otherUID }}</p>
+                <transition name="fade" class="self-center">
+                <p v-if="copySuccess" class="px-1 text-green-500 text-xs absolute bottom-0 left-0 translate-y-4">Copied!</p>
+            </transition>
+            </div>
+            <div class="bg-zinc-200 flex flex-row gap-2 p-4 rounded-md cursor-pointer text-black hover:bg-red-500 hover:text-white transition-colors" v-if="type=='group'" @click="leaveGroup(otherUID)">
+                <div class="">Leave Group</div>
+                <vue-feather type="log-out"> </vue-feather>
+            </div>
         </div>
-        <div class="flex mr-0 ml-auto mr-8 mt-auto mb-auto p-2 bg-zinc-200 flex flex-row rounded-md cursor-pointer text-black"
-        v-if="type=='group'"
-        @click="leaveGroup(otherUID)">
-            <div class="mr-2">Leave Group</div>
-            <vue-feather type="log-out"> </vue-feather>
-        </div>
-    </div>
-        <chat-container ref="chatContainer" class="overflow-y-scroll h-full "
-        :conversationLoad="conversation" 
-        :update="updateMessages"
-        :type="type"></chat-container>
-        <message-sender class="sticky bottom-0"
-        :otherUID="otherUID" 
-        :type="type" 
-        @message-sent="scrollToBottom" 
-        @update-messages="updateMessages"></message-sender>
+        <chat-container ref="chatContainer" class="overflow-y-scroll h-full " :conversationLoad="conversation" :update="updateMessages" :type="type"></chat-container>
+        <message-sender class="sticky bottom-0" :otherUID="otherUID" :type="type" @message-sent="scrollToBottom" @update-messages="updateMessages"></message-sender>
     </div>
 </div>
 </template>
@@ -61,7 +52,8 @@ export default {
             user: null,
             otherDisplay: '',
             type: '',
-            left: []
+            left: [],
+            copySuccess: false,
         }
     },
     methods: {
@@ -78,6 +70,16 @@ export default {
             this.conversation = update;
             //console.log(update);
         },
+        copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.copySuccess = true;
+                setTimeout(() => {
+                    this.copySuccess = false;
+                }, 2000); // Message disappears after 2 seconds
+            }, (err) => {
+                console.error('Failed to copy: ', err);
+            });
+        },
         async updateOtherDisplay(uid, type) {
             if (type == 'convo') {
                 try {
@@ -87,8 +89,7 @@ export default {
                     console.error('Failed to fetch user display info:', error);
                     this.otherDisplay = ''; // Clear or manage display info appropriately on error
                 }
-            }
-            else if (type == 'group') {
+            } else if (type == 'group') {
                 try {
                     const displayInfo = await get_group_name(uid); // Fetch display info for the given UID
                     this.otherDisplay = displayInfo;
@@ -101,22 +102,22 @@ export default {
         leaveGroup(otherUID) {
             leave_group(otherUID);
             this.conversation = [],
-            this.messages = [],
-            this.otherUID = '',
-            this.updatedMessages = [],
-            this.otherDisplay = '',
-            this.type = ''
+                this.messages = [],
+                this.otherUID = '',
+                this.updatedMessages = [],
+                this.otherDisplay = '',
+                this.type = ''
             this.left.push(otherUID);
         },
         scrollToBottom() {
             this.$nextTick(() => {
                 setTimeout(() => { // Add a small delay
-                    
+
                     const chatContainerElement = this.$refs.chatContainer.$el;
                     if (chatContainerElement) {
                         chatContainerElement.scrollTop = chatContainerElement.scrollHeight;
                     } else {
-                     
+
                     }
                 }, 100); // Adjust delay as necessary
             });
@@ -130,32 +131,22 @@ export default {
 
 <style scoped>
 .chat-container {
-    overflow-y: auto; /* Ensure this is set correctly */
-    height: 100%; /* Make sure the height is constrained */
+    overflow-y: auto;
+    /* Ensure this is set correctly */
+    height: 100%;
+    /* Make sure the height is constrained */
 }
-/* main {
-    margin-top: 100px;
-}
-
-h1 {
-    font-weight: normal;
-    color: var(--pink);
-    padding: 40px;
-    padding-bottom: 0;
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s;
 }
 
-.row {
-    margin: 40px;
-    margin-top: 20px;
-    margin-bottom: 0px;
-    display: flex;
-    height: 35px;
+.fade-enter,
+.fade-leave-to
+
+/* .fade-leave-active in <2.1.8 */
+    {
+    opacity: 0;
 }
 
-.clear {
-    margin-left: auto;
-    background-color: var(--pink);
-    color: white;
-    font-size: 18px;
-} */
 </style>
