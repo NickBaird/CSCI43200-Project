@@ -1059,7 +1059,7 @@ async function get_received_messages(uid) {
 	});
 
 	ref.on("child_removed", (message) => {
-		for (i in received_messages) {
+		for (let i = 0; i < received_messages.length; i++) {
 			if (received_messages[i].dbid == message.key) {
 				received_messages.splice(i, 1);
 				update_messages();
@@ -1190,7 +1190,7 @@ async function get_received_group_messages_from_uid(groupId, uid) {
 	});
 
 	ref.on("child_removed", (message) => {
-		for (i in received_messages) {
+		for (let i = 0; i < received_messages.length; i++) {
 			if (received_messages[i].dbid == message.key) {
 				received_messages.splice(i, 1);
 				//update_messages();
