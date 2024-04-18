@@ -4,11 +4,13 @@
 v-if="!left.includes(uid)">
     <div class="flex flex-col">
         <h3 class="text-2xl font-semibold">{{ display }}</h3>
-        <p class="font-light ">{{ uid  }}</p>
+        <p class="font-light ">{{ uid }}</p>
     </div>
-    <div>
-        <!-- <button >Load</button> -->
-        <button v-if="isShowingSee" @click="seeData(responseData, uid, type)" >See</button>
+    <div class="p-2 bg-zinc-200 flex flex-row rounded-md hover:bg-white transition-colors"
+    v-if="isShowingSee"
+    @click="seeData(responseData, uid, type)">
+        <div>Open Chat</div>
+        <vue-feather type="arrow-right"></vue-feather>
     </div>
 
     <!-- <div v-if="dataLoaded">
@@ -24,8 +26,12 @@ import {
     load_conversation,
     load_group
 } from '../../js.js';
+import VueFeather from "vue-feather";
 
 export default {
+    components: {
+        VueFeather
+    },
     data() {
         return {
             sentMessages: [],

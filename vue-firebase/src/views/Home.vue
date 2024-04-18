@@ -19,10 +19,13 @@
             <p class="text-2xl font-semibold">{{ otherDisplay }}</p>
             <p class="text-sm">{{ otherUID }}</p>
         </div>
-            <button class="flex mr-0 ml-auto mr-8 mt-auto mb-auto"
-            v-if="type=='group'"
-            @click="leaveGroup(otherUID)">Leave</button>
+        <div class="flex mr-0 ml-auto mr-8 mt-auto mb-auto p-2 bg-zinc-200 flex flex-row rounded-md cursor-pointer text-black"
+        v-if="type=='group'"
+        @click="leaveGroup(otherUID)">
+            <div class="mr-2">Leave Group</div>
+            <vue-feather type="log-out"> </vue-feather>
         </div>
+    </div>
         <chat-container ref="chatContainer" class="overflow-y-scroll h-full "
         :conversationLoad="conversation" 
         :update="updateMessages"
@@ -42,8 +45,13 @@ import {
     get_group_name,
     leave_group
 } from "../../js.js";
+import VueFeather from "vue-feather";
 
 export default {
+    components: {
+        VueFeather
+    },
+
     data() {
         return {
             conversation: [],

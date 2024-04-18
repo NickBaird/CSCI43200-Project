@@ -20,7 +20,7 @@ export default {
     },
     data() {
         return {
-            groupName: ""
+            groupName: ''
         }
     },
     methods: {
@@ -28,6 +28,7 @@ export default {
             if (name != '') {
                 new_group(name);
             }
+            this.groupName = '';
         }
     }
 }

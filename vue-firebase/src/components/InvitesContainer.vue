@@ -1,16 +1,16 @@
 <template>
     <div class="w-fit text-nowrap flex flex-col items-start gap-2">
         <h1 class="text-2xl font-semibold mb-2 w-full underline">Invites</h1>
-        <button @click="loadData()" class="text-blue-400" v-if="!dataLoaded"><vue-feather type="rotate-cw" ></vue-feather></button>
+        <button @click="loadData()" class="text-blue-400 justify-center ml-auto mr-auto" v-if="!dataLoaded"><vue-feather type="rotate-cw" ></vue-feather></button>
         <div v-if="dataLoaded" class="flex flex-col gap-4  ">
-            <h2>Conversation</h2>
+            <h2 class="font-bold">Conversation</h2>
             <div v-for="invite in invites" :key="invite.key" class="border-y-2 py-2 ">
                 <incomming-invite :display="invite.display" 
                 :convKey="invite.key"
                 :type="'convo'"></incomming-invite>
             </div>
             <div v-if="invites.length === 0">No incoming conversation invites</div>
-            <h2>Group</h2>
+            <h2 class="font-bold">Group</h2>
             <div v-for="inviteGroup in invitesGroup" :key="inviteGroup.key" class="border-y-2 py-2 ">
                 <incomming-invite :display="inviteGroup.display" 
                 :convKey="inviteGroup.key"

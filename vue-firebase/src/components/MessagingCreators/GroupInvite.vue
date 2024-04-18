@@ -23,8 +23,9 @@
     },
     methods: {
       sendGroupInviteVue() {
-        console.log(this.newGroupID + " " + this.newGroupUID)
         send_group_invite(this.newGroupID, this.newGroupUID);
+        this.newGroupID = '';
+        this.newGroupUID = '';
       }
     }
   }

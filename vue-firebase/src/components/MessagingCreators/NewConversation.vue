@@ -31,6 +31,8 @@ export default {
             //console.log(this.newID);
             //console.log(this.newMessage);
             new_conversation(this.newID, this.newMessage);
+            this.newID = '';
+            this.newMessage = '';
         },
 
     }
