@@ -1,81 +1,93 @@
 <template>
-  <div class="bg-zinc-400 flex justify-evenly py-10">
-    <div>
-      <div class="cursor-pointer flex items-center">
-        <vue-feather type="message-square" class="text-black"></vue-feather>Conversations
+    <div class="bg-zinc-400 flex justify-evenly py-10 items-center text-[#423937]">
+      <div>
+          <div class="cursor-pointer flex items-center">
+              <vue-feather type="message-square" class=""></vue-feather>Conversations
+          </div>
+  
+          <div id="conversations-container"></div>
       </div>
-
-      <div id="conversations-container"></div>
-    </div>
-    <div id="conversations-container"></div>
-    <div>
-      <div class="cursor-pointer flex items-center">
-        <vue-feather type="users" class="text-black"></vue-feather>Groups
+      <div>
+          <div class="cursor-pointer flex items-center">
+              <vue-feather type="users" class=""></vue-feather>Groups
+          </div>
+          <div id="groups-container"></div>
       </div>
-      <div id="groups-container"> </div>
+      <div class="cursor-pointer flex items-center" @click="toggleNewConversation">
+          <vue-feather type="edit" class=" flex items-center"></vue-feather>
+      </div>
     </div>
-    <div class="cursor-pointer" @click="toggleNewConversation">
-      <vue-feather type="edit" class="text-black"></vue-feather>
+  
+    <button @click="loadData()"><vue-feather type="rotate-cw" v-if="!dataLoaded"></vue-feather></button>
+    <div v-if="dataLoaded" class="flex flex-col justify-center items-start w-full">
+      <div v-for="conversation in conversations" :key="conversation.id" class="w-full">
+          <conversation-container :display="conversation.display" :uid="conversation.uid" :loadedMessages="conversation.messages" @load-conversation="loadConversation"></conversation-container>
+      </div>
+      <div v-if="conversations.length === 0">No conversations</div>
     </div>
-  </div>
+  
+    <message-creator v-if="isShowingNewConversation" @close="toggleNewConversation" class="absolute left-1/3" />
+  </template>
+  <script>
+  import VueFeather from 'vue-feather';
+  import { update_conversations, load_conversation } from '../../js.js';
+  import ConversationContainer from './ConversationContainer.vue';
+  import MessageCreator from './MessageCreator.vue';
+  import { onMounted } from 'vue';
 
-  <button @click="loadData()">Click to load conversations</button>
-  <button @click="seeData(responseData)">Click to see data</button>
-  <div v-if="dataLoaded">
-    <div v-for="conversation in conversations">
-      <conversation-container :display="conversation.display" :uid="conversation.uid"></conversation-container>
-    </div>
-    <div v-if="responseData.length == 0">No conversations</div>
-  </div>
-
-  <message-creator v-if="isShowingNewConversation" @close="toggleNewConversation" class="absolute left-1/3" />
-
-
-</template>
-
-<script>
-import VueFeather from 'vue-feather';
-import {
-  update_conversations
-} from '../../js.js';
-import ConversationContainer from './ConversationContainer.vue';
-import MessageCreator from './MessageCreator.vue';
-
-
-export default {
-  components: {
-    ConversationContainer,
-    VueFeather,
-    MessageCreator,
-
-  },
-  data() {
-    return {
-      conversations: [],
-      dataLoaded: false,
-      responseData: [],
-      isShowingNewConversation: false
-    }
-  },
-  methods: {
-    async loadData() {
-      try {
-        this.responseData = await update_conversations();
-        console.log(this.responseData);
-      } catch (e) {
-        console.log(e);
+  export default {
+      components: {
+          ConversationContainer,
+          VueFeather,
+          MessageCreator,
+      },
+      
+      data() {
+          return {
+              conversations: [],
+              dataLoaded: false,
+              loadedMessages: [],
+              isShowingNewConversation: false
+          };
+      },
+      methods: {
+          async loadData() {
+              try {
+                  const data = await update_conversations();
+                  if (data && Array.isArray(data) && data.length > 0) {
+                      await this.seeData(data);
+                      this.dataLoaded = true;
+                  } else {
+                      this.dataLoaded = false;
+                      console.log('No data received or empty data array.');
+                  }
+              } catch (error) {
+                  console.error('Error loading data:', error);
+                  this.dataLoaded = false; // Properly update state on error
+              }
+          },
+          async seeData(data) {
+              try {
+                  const promises = data.map(item => load_conversation(item.uid).then(messages => ({
+                      ...item,
+                      messages
+                  })));
+                  this.conversations = await Promise.all(promises);
+              } catch (error) {
+                  console.error('Error processing data:', error);
+              }
+          },
+          loadConversation(conversationData, uid) {
+              this.$emit('load-conversation', conversationData, uid);
+          },
+          toggleNewConversation() {
+              this.isShowingNewConversation = !this.isShowingNewConversation;
+          }
+      },
+      mounted() {
+          this.loadData(); // Ensure loadData is called automatically when the component mounts
       }
-      // const invitesGot = get_conversation_invites().then((response) => {
-      //     console.log(response);
-      //     return response});
-    },
-    seeData(data) {
-      this.dataLoaded = true;
-      this.conversations = data;
-    },
-    toggleNewConversation() {
-      this.isShowingNewConversation = !this.isShowingNewConversation;
-    }
   }
-}
 </script>
+
+  

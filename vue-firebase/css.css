@@ -9,6 +9,8 @@
 	padding: 20px;
 	background-color: #bdc3c7;
 	border-radius: 15px;
+	max-height: 900px;
+	overflow-y: auto; 
 }
 
 p {
@@ -50,7 +52,7 @@ p {
 	border-radius: 15px;
 }
 
-.you {
+.me {
 	display: block;
 	background-color: #3498db;
 	padding: 10px;

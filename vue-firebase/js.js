@@ -11,7 +11,10 @@ export {
 	database,
 	auth,
 	update_conversations,
-	load_conversation
+	load_conversation,
+	update_messages,
+	public_key,
+	send_message
 };
 
 const firebaseConfig = {
@@ -318,6 +321,28 @@ export const getUserDisplayInfo = () => {
 				reject(error); // Rejects the promise if there's an error fetching the data
 			});
 	});
+};
+export const getOtherUserDisplayInfo = (uid) => {
+    return new Promise((resolve, reject) => {
+        if (!uid) {
+            reject("No UID provided.");
+            return;
+        }
+        database
+            .ref("/users/" + uid + "/display")
+            .get()
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    resolve(snapshot.val()); // Resolves with the display information
+                } else {
+                    reject("Display info not found.");
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching user display info: ", error);
+                reject(error); // Rejects the promise if there's an error fetching the data
+            });
+    });
 };
 
 async function add_to_map(uid) {
@@ -726,7 +751,7 @@ async function get_conversation_invites() {
 					});
 			});
 			//update_invites();
-			console.log(conversation_invites);
+			//console.log(conversation_invites);
 		});
 
 	return conversation_invites;
@@ -1021,7 +1046,7 @@ async function get_received_messages(uid) {
 		}
 
 		received_messages.push(output);
-		update_messages();
+		//update_messages();
 	});
 
 	ref.on("child_removed", (message) => {
@@ -1097,7 +1122,7 @@ async function get_sent_messages(uid) {
 		}
 
 		sent_messages.push(output);
-		update_messages();
+		//update_messages();
 	});
 
 	ref.on("child_removed", (message) => {
@@ -1305,15 +1330,18 @@ async function load_conversation(uid) {
 	otherdisplay = map[uid].display;
 	await get_received_messages(uid);
 	await get_sent_messages(uid);
+	return {
+		sent: sent_messages,
+		received: received_messages};
 
-	var container = document.getElementById("message-container");
-	container.innerHTML =
-		'<input type="text" id="message-box"><button onclick="send_message(\'' +
-		uid +
-		"', " +
-		"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file('" +
-		uid +
-		"', document.getElementById('file-upload').files[0]);\">Send File</button>";
+	// var container = document.getElementById("message-container");
+	// container.innerHTML =
+	// 	'<input type="text" id="message-box"><button onclick="send_message(\'' +
+	// 	uid +
+	// 	"', " +
+	// 	"document.getElementById('message-box').value);\">Send</button><input type='file' id='file-upload' /><button onclick=\"send_file('" +
+	// 	uid +
+	// 	"', document.getElementById('file-upload').files[0]);\">Send File</button>";
 }
 
 function unload_conversation() {
@@ -1325,7 +1353,7 @@ function unload_conversation() {
 		received_messages = [];
 		sent_messages = [];
 		update_messages();
-		document.getElementById("message-container").innerHTML = "";
+		//document.getElementById("message-container").innerHTML = "";
 	}
 }
 
@@ -1354,7 +1382,7 @@ function unload_group() {
 		received_messages = [];
 		sent_messages = [];
 		update_messages();
-		document.getElementById("message-container").innerHTML = "";
+		//document.getElementById("message-container").innerHTML = "";
 	}
 }
 
@@ -1374,8 +1402,8 @@ function unload() {
 }
 
 function update_messages() {
-	var container = document.getElementById("messages-container");
-	container.innerHTML = "";
+	// var container = document.getElementById("messages-container");
+	// container.innerHTML = "";
 	var rcount = 0,
 		scount = 0;
 
@@ -1389,6 +1417,8 @@ function update_messages() {
 		deleteBtn = "<button onclick=\"delete_conversation_message('";
 	}
 
+	let messages_array = [];
+
 	while (true) {
 		if (rcount < received_messages.length)
 			if (scount < sent_messages.length)
@@ -1397,57 +1427,83 @@ function update_messages() {
 					received_messages[rcount].timestamp <=
 						sent_messages[scount].timestamp
 				) {
-					container.innerHTML +=
-						'<div class="other" id="' +
-						received_messages[rcount].dbid +
-						'"><h2>' +
-						map[received_messages[rcount].uid].display +
-						":  <h2><h3>" +
-						received_messages[rcount].message +
-						"</h3><br></div>";
+					let message_object = {
+						id: received_messages[rcount].dbid,
+						display: map[received_messages[rcount].uid].display,
+						message: received_messages[rcount].message
+					}
+					messages_array.push(message_object);
+					// container.innerHTML +=
+					// 	'<div class="other" id="' +
+					// 	received_messages[rcount].dbid +
+					// 	'"><h2>' +
+					// 	map[received_messages[rcount].uid].display +
+					// 	":  <h2><h3>" +
+					// 	received_messages[rcount].message +
+					// 	"</h3><br></div>";
 					rcount++;
 				} else {
-					container.innerHTML +=
-						'<div class="you" id="' +
-						sent_messages[scount].dbid +
-						'"><h2>You:  <h2><h3>' +
-						sent_messages[scount].message +
-						"</h3>" +
-						deleteBtn +
-						loaded +
-						"','" +
-						sent_messages[scount].dbid +
-						"')\">Delete</button><br></div>";
+					let message_object = {
+						id: received_messages[scount].dbid,
+						display: map[received_messages[scount].uid].display,
+						message: received_messages[scount].message
+					}
+					messages_array.push(message_object);
+					// container.innerHTML +=
+					// 	'<div class="you" id="' +
+					// 	sent_messages[scount].dbid +
+					// 	'"><h2>You:  <h2><h3>' +
+					// 	sent_messages[scount].message +
+					// 	"</h3>" +
+					// 	deleteBtn +
+					// 	loaded +
+					// 	"','" +
+					// 	sent_messages[scount].dbid +
+					// 	"')\">Delete</button><br></div>";
 					scount++;
 				}
 			else {
-				container.innerHTML +=
-					'<div class="other" id="' +
-					received_messages[rcount].dbid +
-					'"><h2>' +
-					map[received_messages[rcount].uid].display +
-					":  <h2><h3>" +
-					received_messages[rcount].message +
-					"</h3><br></div>";
+				let message_object = {
+					id: received_messages[rcount].dbid,
+					display: map[received_messages[rcount].uid].display,
+					message: received_messages[rcount].message
+				}
+				messages_array.push(message_object);
+				// container.innerHTML +=
+				// 	'<div class="other" id="' +
+				// 	received_messages[rcount].dbid +
+				// 	'"><h2>' +
+				// 	map[received_messages[rcount].uid].display +
+				// 	":  <h2><h3>" +
+				// 	received_messages[rcount].message +
+				// 	"</h3><br></div>";
 				rcount++;
 			}
 		else {
 			if (scount < sent_messages.length) {
-				container.innerHTML +=
-					'<div class="you" id="' +
-					sent_messages[scount].dbid +
-					'"><h2>You:  <h2><h3>' +
-					sent_messages[scount].message +
-					"</h3>" +
-					deleteBtn +
-					loaded +
-					"','" +
-					sent_messages[scount].dbid +
-					"')\">Delete</button><br></div>";
+				let message_object = {
+					id: received_messages[scount].dbid,
+					display: map[received_messages[scount].uid].display,
+					message: received_messages[scount].message
+				}
+				messages_array.push(message_object);
+				// container.innerHTML +=
+				// 	'<div class="you" id="' +
+				// 	sent_messages[scount].dbid +
+				// 	'"><h2>You:  <h2><h3>' +
+				// 	sent_messages[scount].message +
+				// 	"</h3>" +
+				// 	deleteBtn +
+				// 	loaded +
+				// 	"','" +
+				// 	sent_messages[scount].dbid +
+				// 	"')\">Delete</button><br></div>";
 				scount++;
 			} else break;
 		}
 	}
+	//console.log(messages_array);
+	return messages_array;
 }
 
 function update_conversations() {
