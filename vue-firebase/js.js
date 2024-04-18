@@ -18,7 +18,12 @@ export {
 	update_groups,
 	get_group_members,
 	load_group,
-	send_group_message
+	send_group_message,
+	accept_group_invite,
+	reject_group_invite,
+	add_to_map,
+	map,
+	verify_message
 };
 
 const firebaseConfig = {
@@ -1298,7 +1303,7 @@ async function get_sent_group_messages(groupId) {
 			};
 			sent_messages.push(output);
 			//update_messages();
-			console.log("SENT MESSAGE:", output);
+			//console.log("SENT MESSAGE:", output);
 		} else {
 			get_group_file_from_id(
 				groupId,

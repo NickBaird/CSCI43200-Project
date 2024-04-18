@@ -6,21 +6,22 @@
     </div>
     
     <div class="flex flex-row gap-4 text-base">
-        <button @click="accept_conversation_invite_vue(convKey)" class="bg-green-500 px-4 py-2 rounded-md text-white hover:bg-green-400 transition-colors font-semibold">Accept</button>
-        <button @click="reject_conversation_invite_vue(convKey)" class="bg-rose-500 px-4 py-2 rounded-md text-white hover:bg-rose-400 transition-colors font-semibold">Reject</button></div>
+        <button v-if="type == 'convo'" @click="accept_conversation_invite_vue(convKey)" class="bg-green-500 px-4 py-2 rounded-md text-white hover:bg-green-400 transition-colors font-semibold">Accept</button>
+        <button v-if="type == 'convo'" @click="reject_conversation_invite_vue(convKey)" class="bg-rose-500 px-4 py-2 rounded-md text-white hover:bg-rose-400 transition-colors font-semibold">Reject</button>
+        <button v-if="type == 'group'" @click="accept_group_invite_vue(convKey)" class="bg-green-500 px-4 py-2 rounded-md text-white hover:bg-green-400 transition-colors font-semibold">Accept</button>
+        <button v-if="type == 'group'" @click="reject_group_invite_vue(convKey)" class="bg-rose-500 px-4 py-2 rounded-md text-white hover:bg-rose-400 transition-colors font-semibold">Reject</button></div>
 
 </div>
 </template>
 
 <script>
 import {
-    accept_conversation_invite
-} from '../../js.js';
-import {
-    reject_conversation_invite
-} from '../../js.js';
-import {
-    get_conversation_invites
+    accept_conversation_invite,
+    reject_conversation_invite,
+    get_conversation_invites,
+    accept_group_invite,
+	reject_group_invite
+
 } from '../../js.js';
 
 export default {
@@ -37,9 +38,17 @@ export default {
         reject_conversation_invite_vue(invite) {
             this.notClicked = false;
             reject_conversation_invite(invite);
+        },
+        accept_group_invite_vue(invite) {
+            this.notClicked = false;
+            accept_group_invite(invite);
+        },
+        reject_group_invite_vue(invite) {
+            this.notClicked = false;
+            reject_group_invite(invite);
         }
     },
-    props: ['display', 'convKey'],
+    props: ['display', 'convKey', 'type'],
     computed: {}
 }
 </script>

@@ -63,7 +63,7 @@ import {
               dataLoaded: false,
               loadedMessages: [],
               isShowingNewConversation: false,
-              clicked: ""
+              clicked: 'convo'
           };
       },
       methods: {
