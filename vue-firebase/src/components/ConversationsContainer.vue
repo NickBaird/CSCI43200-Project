@@ -46,24 +46,24 @@ import {
     onMounted
 } from 'vue';
 
-export default {
-    components: {
-        ConversationContainer,
-        VueFeather,
-        MessageCreator,
-    },
-
-    data() {
-        return {
-            conversations: [],
-            dataLoaded: false,
-            loadedMessages: [],
-            isShowingNewConversation: false,
-            clicked: 'convo'
-        };
-    },
-    methods: {
-        async loadData() {
+  export default {
+      components: {
+          ConversationContainer,
+          VueFeather,
+          MessageCreator,
+      },
+      
+      data() {
+          return {
+              conversations: [],
+              dataLoaded: false,
+              loadedMessages: [],
+              isShowingNewConversation: false,
+              clicked: 'convo'
+          };
+      },
+      methods: {
+          async loadData() {
             if (this.clicked == 'convo') {
                 try {
                     const data = await update_conversations();
