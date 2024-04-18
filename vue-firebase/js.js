@@ -23,7 +23,8 @@ export {
 	reject_group_invite,
 	add_to_map,
 	map,
-	verify_message
+	verify_message,
+	delete_conversation_message
 };
 
 const firebaseConfig = {
@@ -407,7 +408,7 @@ async function add_to_groups(groupId) {
 		.ref("/groups/" + groupId + "/members")
 		.on("child_added", (member) => {
 			add_to_map(member.key);
-			console.log("Added Member", member.key);
+			//console.log("Added Member", member.key);
 		});
 	groups.push(groupId);
 	if (!(await user_has_access(groupId))) {
@@ -1138,10 +1139,10 @@ async function get_sent_messages(uid) {
 	});
 
 	ref.on("child_removed", (message) => {
-		for (i in sent_messages) {
+		for (let i = 0; i < sent_messages; i++) {
 			if (sent_messages[i].dbid == message.key) {
 				sent_messages.splice(i, 1);
-				update_messages();
+				//update_messages();
 				break;
 			}
 		}

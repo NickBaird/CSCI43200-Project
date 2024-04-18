@@ -25,7 +25,9 @@ export default {
     },
     methods: {
         newGroupVue(name) {
-            new_group(name);
+            if (name != '') {
+                new_group(name);
+            }
         }
     }
 }
