@@ -131,7 +131,6 @@ export default {
                 }, 100); // Adjust delay as necessary
             });
         }
-
     },
 
     inheritAttrs: false

@@ -63,7 +63,6 @@
 <script>
 	import { register2 } from '../../js.js';
 
-
 	export default {
 	    data() {
 	        return {
@@ -71,7 +70,6 @@
 	            registerEmail: '',
 	            registerPassword: '',
 				emailInUse: false
-
 	        }
 	    },
 	    props: {},
@@ -89,8 +87,6 @@
 	                    console.error(error); // Log or display the error message to the user
 	                });
 	        }
-
-
 	    }
 	}
 </script>

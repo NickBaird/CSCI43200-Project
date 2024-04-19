@@ -52,7 +52,6 @@
                 <vue-feather type="chevron-up" class=""></vue-feather>
             </button>
             <invites-container></invites-container>
-
         </div>
     </div>
     <!-- Conditional rendering for login/signup button -->
