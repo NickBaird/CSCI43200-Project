@@ -23,6 +23,12 @@
             <transition name="fade" class="self-center">
                 <p v-if="copySuccess" class="text-green-500 text-xs">Copied!</p>
             </transition>
+            <div class="h-full flex items-center text-xl font-bold pt-2" v-if="$route.name !== 'auth'">
+                <router-link :to="{ name: 'auth' }" @click.native="toggleProfile">
+                    <button type="button" class="cursor-pointer text-white bg-blue-500 rounded-md px-4 py-2">Create new account</button>
+                </router-link>
+            </div>
+
         </div>
     </div>
     <div class="relative flex justify-end" v-if="$route.name !== 'auth' && user">
@@ -44,7 +50,6 @@
 </nav>
 </template>
 
-  
 <script>
 import VueFeather from 'vue-feather';
 import {
@@ -105,7 +110,6 @@ export default {
 };
 </script>
 
-  
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
