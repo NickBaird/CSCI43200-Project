@@ -1,6 +1,6 @@
 <template>
 <nav class="bg-[#301014] w-full h-20 px-10 py-5 flex items-center justify-between top-0 fixed z-20">
-    <div v-if="!user && $route.name !== 'auth'" class="absolute w-full h-screen left-0 top-0 bg-black/50 z-30 backdrop-blur-md flex items-center justify-center">
+    <div v-if="!user && $route.name !== 'auth'" class="absolute w-full h-screen left-0 top-0 bg-black/50 z-30 backdrop-blur-md flex items-center justify-center" @click="reloadPage">
         <div class=" flex flex-col gap-4 items-center p-10 rounded-md max-w-screen-sm font-bold bg-white" v-if="$route.name !== 'auth' && !user">
             <div class="self-start ">
                 <h1 class="text-4xl">Hello 👋</h1>
@@ -52,6 +52,7 @@
                 <vue-feather type="chevron-up" class=""></vue-feather>
             </button>
             <invites-container></invites-container>
+
         </div>
     </div>
     <!-- Conditional rendering for login/signup button -->
@@ -101,6 +102,9 @@ export default {
             }, (err) => {
                 console.error('Failed to copy: ', err);
             });
+        },
+        reloadPage() {
+            window.location.reload();
         }
     },
     created() {
