@@ -1,5 +1,19 @@
 <template>
 <nav class="bg-[#301014] w-full h-20 px-10 py-5 flex items-center justify-between top-0 fixed z-20">
+    <div v-if="!user && $route.name !== 'auth'" class="absolute w-full h-screen left-0 top-0 bg-black/50 z-30 backdrop-blur-md flex items-center justify-center">
+        <div class=" flex flex-col gap-4 items-center p-10 rounded-md max-w-screen-sm font-bold bg-white" v-if="$route.name !== 'auth' && !user">
+            <div class="self-start ">
+                <h1 class="text-4xl">Hello 👋</h1>
+                <h2 class=" text-base font-normal ">Welcome to the E2EE messaging app. We offer the most secure End-to-end encrypted system for your messages. <a href="https://docs.google.com/document/d/1e-a225eE729Kk_LTB1nHZXcBR8lcD_H0VmyULs0UtH0/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="text-blue-500 cursor-pointer">Read more.</a> </h2>
+              
+                <h2 class=" text-lg font-normal mt-2">Happy secure messaging 😃</h2>
+            </div>
+
+            <router-link :to="{ name: 'auth' }" class="w-full">
+                <button type="button" class="cursor-pointer text-[#EDF4ED] bg-blue-500 hover:bg-blue-600 transition-colors rounded-lg px-8 py-10 w-full text-xl">Login or Signup</button>
+            </router-link>
+        </div>
+    </div>
     <!-- Conditional rendering for menu/back icon -->
     <router-link :to="{ name: 'home' }" v-if="$route.name === 'auth'">
         <vue-feather type="arrow-left" class="h-full cursor-pointer text-[#EDF4ED]"></vue-feather>

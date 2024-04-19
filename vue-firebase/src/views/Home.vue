@@ -2,6 +2,7 @@
 <!-- <messaging-creators></messaging-creators>
 <invites-container></invites-container> -->
 <div class="h-screen w-full  grid grid-cols-[.3fr_.7fr] pt-20 overflow-clip">
+    
 
     <div class="bg-[#f9f1ef]  w-full flex flex-col ">
         <!-- <messaging-creators></messaging-creators> -->

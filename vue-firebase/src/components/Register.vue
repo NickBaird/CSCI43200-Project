@@ -24,10 +24,11 @@
 				type="text"
 				id="register-email"
 				v-model="registerEmail"
+				:class="{'border-red-500': emailInUse}" 
 				class="text-gray-600 px-4 py-2 border-2 border-gray-200 rounded-md "
 				placeholder="Email"
 			/>
-
+			<p v-if="emailInUse" class="text-red-500">Email in use</p>
 			<input
 				type="password"
 				id="register-password"
@@ -69,6 +70,7 @@
 	            registerName: '',
 	            registerEmail: '',
 	            registerPassword: '',
+				emailInUse: false
 
 	        }
 	    },
@@ -83,6 +85,7 @@
 	                })
 	                .catch((error) => {
 	                    // If there's an error, you can handle it here (e.g., show an error message)
+						this.emailInUse=true;
 	                    console.error(error); // Log or display the error message to the user
 	                });
 	        }
