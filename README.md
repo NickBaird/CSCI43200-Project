@@ -1,29 +1,24 @@
-# vue-firebase
+# E2EE Messaging App
 
-This template should help get you started developing with Vue 3 in Vite.
+This is our CSCI 43200 Final Project. Follow the instructions given below to use the app. 
 
-## Recommended IDE Setup
+## Local Installation
+1. Download the repository. 
+2. Open Terminal in the directory.
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+>Download [node js](https://nodejs.org/en/download) if you haven't already.
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
+3. Install all the required packages by running
 ```sh
 npm install
 ```
-
-### Compile and Hot-Reload for Development
-
+4. Start development server to view the app
 ```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+5. Launch the given url. 
 
-```sh
-npm run build
-```
+---
+
+## [Documentation](https://docs.google.com/document/d/1e-a225eE729Kk_LTB1nHZXcBR8lcD_H0VmyULs0UtH0/edit?usp=sharing)
